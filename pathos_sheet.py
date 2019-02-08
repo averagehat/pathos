@@ -1,0 +1,90 @@
+'''
+Usage:
+    pathos_sheet.py <samplesheet> --config <config> --sampledir <sampledir> [--log <log>] [--outdir <outdir>]
+
+Options:
+    -c <config>, --config <config>
+    --o <outdir>, --outdir <outdir>
+    --log <log>
+    --sampledir <sampledir>
+'''
+
+
+from glob import glob
+from docopt import docopt
+import csv
+import os
+import pipeline
+from path import Path
+import yaml
+import itertools
+import sys
+from functools import partial
+# if there is more than one pair of read files need to handle that. I guess by concatenating.
+# need to fix so that we join on conting ID. currently joining on something else.
+# also ppl might do something with index
+
+
+
+
+def weave_files(row, args):
+  SEP=';'
+  control_dirs = row['control_dirs'].split(SEP)
+  sdir = partial(os.path.join, args['--sampledir'])
+  read_dirs = row['read_dirs'].split(SEP)
+  # control_dirs could be empty
+  c1s, c2s = reads_from_dirs(map(sdir, control_dirs)) if control_dirs else ([], [])
+  controls = list(itertools.chain(*zip(c1s, c2s)))
+  # order of contams doesn't matter but we'll zip them anyway
+  r1s, r2s = reads_from_dirs(map(sdir, read_dirs))
+  # weave them into a sigle list of R1, R2^1, R1^2, R2^2 ....
+  fastqs = list(itertools.chain(*zip(r1s, r2s)))
+  return fastqs, controls
+
+def reads_from_dirs(dirs):
+  """Extract all R1/R2 files from a directory, ignores index (I1/I2) files"""
+  # return list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R[12]_*')), dirs)))
+  r1s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R1_*')), dirs)))
+  r2s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R2_*')), dirs)))
+  return r1s, r2s
+
+# run the main program
+
+
+def main():
+  args = docopt(__doc__, version='Version 1.0')
+
+  # copy-pasted from pipeline.py :(
+  cfg_f = args['--config']
+  cfg_y = yaml.load(open(cfg_f))
+  cfg = pipeline.Config(cfg_y)
+  # it's probably better to have separate log files.
+  if args['--log']:
+    _log = Path(args['--log'])
+    if _log.exists():
+      print "Removing old log file %s" % _log
+      _log.remove()
+    log = open(args['--log'], 'a')
+  else:
+    log = sys.stdout
+
+  sheet = open(args['<samplesheet>'])
+  rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
+  rows=list(rows)
+  print rows
+  print args
+  for i, row in enumerate(rows):
+    base_out = args['--outdir'] or "." # os.getcwd()?
+    cfg.outdir = os.path.join(base_out, "sheet-%d" % i)
+    fastqs, controls = weave_files(row, args)
+    print controls
+    if controls:
+        # TODO
+        pass
+        # sh.python('pipeline.py', *fastqs, '--control', *controls, config=cfg_f, o=cfg.outdir)
+    print 'python pipeline.py', ' '.join(fastqs), '--config', args['--config'], '-o', cfg.outdir, '--control', ' '.join(controls)
+
+
+
+if __name__ == '__main__':
+    main()

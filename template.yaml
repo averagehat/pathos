@@ -1,0 +1,23 @@
+rapsearch:
+    rapsearchDB: /media/People/michael.panciera/path-pipe/rapsearch-nr-db
+pricefilter:
+  highQualPercent: 80
+  calledPercent: 95
+  highQualMin: 0.01
+bowtie2:
+  bowtieDB: /media/People/michael.panciera/path-pipe/bowtie-index
+gsnap:
+  gsnapDB: /fakepath/
+star:
+  starDB: /media/People/michael.panciera/path-pipe/star-index-dir/
+threads: 16
+assembly:
+  assembler: abyss
+  options:
+cdhitdup:
+  minDifference: 15
+ncbi:
+  ntDB: /media/VD_Research/databases/ncbi/blast/nt/nt
+  nrDB: /media/VD_Research/databases/ncbi/blast/nr/nr
+lzwfilter:
+  maxCompressionScore: 0.55
