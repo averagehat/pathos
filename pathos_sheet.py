@@ -1,12 +1,13 @@
 '''
 Usage:
-    pathos_sheet.py <samplesheet> --config <config> --sampledir <sampledir> [--log <log>] [--outdir <outdir>]
+    pathos_sheet.py <samplesheet> --config <config> --sampledir <sampledir> [--log <log>] [--outdir <outdir>] [-p] [--qsub]
 
 Options:
     -c <config>, --config <config>
     --o <outdir>, --outdir <outdir>
     --log <log>
     --sampledir <sampledir>
+    --qsub, -q
 '''
 
 
@@ -20,6 +21,7 @@ import yaml
 import itertools
 import sys
 from functools import partial
+import multiprocessing
 # if there is more than one pair of read files need to handle that. I guess by concatenating.
 # need to fix so that we join on conting ID. currently joining on something else.
 # also ppl might do something with index
@@ -27,10 +29,10 @@ from functools import partial
 
 
 
-def weave_files(row, args):
+def weave_files(sampledir, row):
   SEP=';'
   control_dirs = row['control_dirs'].split(SEP)
-  sdir = partial(os.path.join, args['--sampledir'])
+  sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
   # control_dirs could be empty
   c1s, c2s = reads_from_dirs(map(sdir, control_dirs)) if control_dirs else ([], [])
@@ -71,18 +73,55 @@ def main():
   sheet = open(args['<samplesheet>'])
   rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
   rows=list(rows)
-  print rows
-  print args
-  for i, row in enumerate(rows):
-    base_out = args['--outdir'] or "." # os.getcwd()?
-    cfg.outdir = os.path.join(base_out, "sheet-%d" % i)
-    fastqs, controls = weave_files(row, args)
-    print controls
-    if controls:
-        # TODO
-        pass
-        # sh.python('pipeline.py', *fastqs, '--control', *controls, config=cfg_f, o=cfg.outdir)
-    print 'python pipeline.py', ' '.join(fastqs), '--config', args['--config'], '-o', cfg.outdir, '--control', ' '.join(controls)
+  base_out = args['--outdir'] or "." # os.getcwd()?
+  sampledir = args['--sampledir']
+  def p_run(rows):
+      weave = partial(weave_files, sampledir)
+      fqs_and_controls = list(map(weave, rows))
+      run2_func = partial(pipeline.run2, cfg, log, base_out)
+      pool = multiprocessing.Pool(len(rows))
+      print "Launching %d processes.\n==========================\n\n" % len(rows)
+      pool.map(run2_func, fqs_and_controls)
+      pool.close()
+      pool.join()
+  if False: p_run(rows)
+  if args['--qsub']:
+    for i, row in enumerate(rows):
+      #outdir = os.path.join(base_out, "sheet-sample-%d" % i)
+      fastqs, controls = weave_files(sampledir, row)
+      import tempfile
+      import sh
+      temp = tempfile.NamedTemporaryFile(prefix='pathos_sheet', suffix='qsub', delete=False)
+      template = "{this_script} --fastq {fastqs} -c {cfg} -o {odir} --control {controls}"
+      cmd = template.format(this_script='<SCRIPT>',
+                      fastqs=' '.join(fastqs),
+                      controls=' '.join(controls),
+                      cfg=args['--config'],
+                      odir=base_out)
+      temp.write(cmd)
+      temp.close()
+      script = temp.name
+      #print "qsub {script} -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
+      #print " -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
+      sh.qsub(script,
+              '-N',  "sheet-sample-%d" % i,
+              # "-M", "EMAIL HERE",
+              '-l', "nodes=1:ppn=4")
+      print "Running %s" % script
+#  if p:
+#
+#  else:
+#    for i, row in enumerate(rows):
+#      cfg.outdir = os.path.join(base_out, "sheet-sample-%d" % i)
+#      pipeline.run2(cfg, log, base_out, (fastqs, controls))
+
+
+   # if controls:
+   #     # TODO
+   #   import sh
+      #sh.python('pipeline.py', ' '.join(fastqs), '--control', ' '.join(controls), config=cfg_f, outdir=cfg.outdir)
+   #   sh.python('pipeline.py', ' '.join(fastqs), '--config', cfg_f,  '--outdir', cfg.outdir, '--control', ' '.join(controls))
+    #print 'python pipeline.py', ' '.join(fastqs), '--config', args['--config'], '-o', cfg.outdir, '--control', ' '.join(controls)
 
 
 

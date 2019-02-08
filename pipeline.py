@@ -1,10 +1,13 @@
 '''
 Usage:
-    pipeline.py <FASTQS>... --config <config> [-o <outdir>] [--log <log>] [--control <CONTROLS>...]
+    pipeline.py (--fastq <FASTQS>...) --config <config> [-o <outdir>] [--log <log>] [--control <CONTROLS>...]
 
 Options:
+    -f <FASTQS>, --fastq <FASTQS>
+    -r <CONTROLS>, --control <CONTROLS>
     -c <config>, --config <config>
-    --log <log>
+    --o <outdir>, --outdir <outdir>
+    --log <log>, -l <log>
 '''
 import sh
 from itertools import imap, izip, tee, chain, groupby, ifilter, starmap
@@ -85,6 +88,7 @@ def star(log, cfg, in1, in2):
           genomeDir=cfg.star.starDB,
           outSAMtype="SAM",
           outReadsUnmapped="Fastx",
+          outFileNamePrefix=cfg.outdir,
           _out=log, _err=log)
 
 def pricefilter(log, cfg, in1, in2, o1, o2):
@@ -536,32 +540,25 @@ def run(cfg, input1, input2, contams, log=None):
 #    krona(log, cfg, nr1, kronaNR1)
 #    krona(log, cfg, nr2, kronaNR2)
 
-def main():
-  args = docopt(__doc__, version='Version 1.0')
-
-  cfg = args['--config']
-  cfg = yaml.load(open(cfg))
-  validate(cfg, schema)
-  cfg = Config(cfg)
-  cfg.outdir = args['-o'] or "."
-  if args['--log']:
-    _log = Path(args['--log'])
-    if _log.exists():
-      print "Removing old log file %s" % _log
-      _log.remove()
-    log = open(args['--log'], 'a')
-  else:
-    log = sys.stdout
-
-  fastqs = args['<FASTQS>']
+def run2(cfg, log, base_out, fastqs_and_controls):
   '''If there is more than one pair of input files, merge them into a single pair (two files). r1 will have all the R1 files, r2 will have all the R2 files, in the order that they were passed to the commandline.
   NOTE: this requires that they were passed in the correct way!
-  '''
+  fastqs_and_controls is a tuple of the flie-lists'''
+  fastqs, controls = fastqs_and_controls
+  fastqs, controls = list(fastqs), list(controls)
+  print 'FASTQS : %s' % fastqs, 'CONTROLS : %s' % controls
   assert len(fastqs) > 1 and (len(fastqs) % 2) == 0, "Must provide an even number of input files."
+  vdbpm_id = Path(fastqs[0]).splitall()[-2]
+  #print fastqs, control
+  outdir = os.path.join(base_out, "sheet-%s" % vdbpm_id)
+  cfg2 = Config(cfg.__dict__) # I'm not sure if this obj is shared with other processes
+  cfg2.outdir = outdir
+  p = partial(os.path.join, outdir)
+  if not os.path.exists(outdir): os.mkdir(outdir)
   if len(fastqs) > 2:
-    p = partial(os.path.join, cfg.outdir)
     r1 = p("input_merged.r1.fq")
     r2 = p("input_merged.r2.fq")
+    #if not os.path.exists(cfg.outdir): os.mkdir(cfg.outdir)
     x1s, x2s = fastqs[0::2], fastqs[1::2]
     with open(r1, 'wb') as o1:
       with open(r2, 'wb') as o2:
@@ -572,16 +569,56 @@ def main():
             shutil.copyfileobj(i2, o2)
   else:
     r1, r2 = fastqs[0], fastqs[1]
+  run(cfg2, r1, r2, controls, log)
+
+
+
+def arg_parser():
+
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--fastq', nargs='+', required=True)
+  parser.add_argument('-c', '--config', type=str, required=True)
+  parser.add_argument('-o', '--outdir', type=str, required=True)
+  parser.add_argument('--control', nargs='*', required=False)
+  parser.add_argument('-l', '--log', type=str)
+  return parser
+
+def main():
+  parser = arg_parser()
+  args = parser.parse_args()
+  #args = docopt(__doc__, version='Version 1.0')
+
+  cfg = args.config
+  cfg = yaml.load(open(cfg))
+  validate(cfg, schema)
+  cfg = Config(cfg)
+  cfg.outdir = args.outdir or "."
+  if args.log:
+    _log = Path(args.log)
+    if _log.exists():
+      print "Removing old log file %s" % _log
+      _log.remove()
+    log = open(args.log, 'a')
+  else:
+    log = sys.stdout
+
+  fastqs = args.fastq
   #c1, c2 = args['<c1>'], args['<c2>']
   #run(cfg, args['<r1>'], args['<r2>'], c1, c2, log)
-  controls = args['<CONTROLS>']
-  run(cfg, r1, r2, controls, log)
+  #TODO: fix . . .
+  controls = args.control
+  print args
+
+  run2(cfg, log, cfg.outdir, (fastqs, controls))
+#def run2(cfg, log, base_out, fastqs_and_controls):
+  #run(cfg, r1, r2, controls, log)
 
 #  try:
 #    run(cfg, args['<r1>'], args['<r2>'], log)
 #  except Exception as e:
 #    log.write(str(e))
-  if args['--log']: log.close()
+  if args.log: log.close()
   sys.exit(0)
 
 if __name__ == '__main__': main()
