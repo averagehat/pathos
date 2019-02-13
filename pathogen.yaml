@@ -22,4 +22,4 @@ ncbi:
 lzwfilter:
   minCompressionScore: 0.55
 blastn:
-  max_target_seqs: 10
+  max_target_seqs: 3

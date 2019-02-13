@@ -27,10 +27,10 @@ import multiprocessing
 # also ppl might do something with index
 
 
+SEP=';'
 
 
 def weave_files(sampledir, row):
-  SEP=';'
   control_dirs = row['control_dirs'].split(SEP)
   sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
@@ -92,8 +92,8 @@ def main():
       import tempfile
       import sh
       temp = tempfile.NamedTemporaryFile(prefix='pathos_sheet', suffix='qsub', delete=False)
-      template = "{this_script} --fastq {fastqs} -c {cfg} -o {odir} --control {controls}"
-      cmd = template.format(this_script='<SCRIPT>',
+      template = "{script} --fastq {fastqs} -c {cfg} -o {odir} --control {controls}"
+      cmd = template.format(script='python /u/michael.panciera/CURRENT/pathos/pipeline.py',
                       fastqs=' '.join(fastqs),
                       controls=' '.join(controls),
                       cfg=args['--config'],
@@ -103,8 +103,9 @@ def main():
       script = temp.name
       #print "qsub {script} -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
       #print " -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
+      sample_num = row['read_dirs'].split(SEP)[0]
       sh.qsub(script,
-              '-N',  "sheet-sample-%d" % i,
+              '-N',  "sheet-sample-%s" % sample_num,
               # "-M", "EMAIL HERE",
               '-l', "nodes=1:ppn=4")
       print "Running %s" % script

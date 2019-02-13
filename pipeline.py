@@ -88,7 +88,7 @@ def star(log, cfg, in1, in2):
           genomeDir=cfg.star.starDB,
           outSAMtype="SAM",
           outReadsUnmapped="Fastx",
-          outFileNamePrefix=cfg.outdir,
+          outFileNamePrefix=os.path.join(cfg.outdir, STAR_PREFIX),
           _out=log, _err=log)
 
 def pricefilter(log, cfg, in1, in2, o1, o2):
@@ -340,7 +340,15 @@ from plumbum.cmd import samtools, gmap_build, gsnapl
 
 def bam2fq(sam, outpath, pairflag):
   proc = samtools['view']['-f', pairflag, sam]
+  #import ipdb; ipdb.set_trace()
+  # TODO: fix
+  # https://support.bioconductor.org/p/68040/
+  # https://www.biostars.org/p/323175/
+  # it would be good to test this too lol in a unit test
   with open(outpath, 'w') as outfile:
+    #TODO: the following doesn't catch failures but errors with
+    # a type error because line will be a list of [stdout, stderr] in the case
+    # of error
     for line in proc.popen().iter_lines(retcode=None):
       if line.startswith('@'):
         continue
@@ -361,23 +369,28 @@ def bam2fq(sam, outpath, pairflag):
 #  bam2fq(sam, outR1, '64')
 #  bam2fq(sam, outR2, '128')
 
-def map_contam(idxFolder, contams, sampR1, sampR2, sam, outR1, outR2):
-  idxName = "contam-idx"
-  sh.gmap_build('-d', "%s/%s" % (idxFolder, idxName), *contams)
-  sh.gsnapl('-d', idxFolder, '-d', idxName, sampR1, sampR2, "-A", "sam", "-o", sam)
-  bam2fq(sam, outR1, '64')
-  bam2fq(sam, outR2, '128')
+def map_contam(log, idxFolder, contams, sampR1, sampR2, sam, outR1, outR2):
+#  idxName = "contam-idx"
+#  sh.gmap_build('-d', "%s/%s" % (idxFolder, idxName), *contams)
+#  sh.gsnapl('-d', idxFolder, '-d', idxName, sampR1, sampR2, "-A", "sam", "-o", sam)
+#  bam2fq(sam, outR1, '64')
+#  bam2fq(sam, outR2, '128')
+
+   sh.bowtie2_build(','.join(contams), idxFolder)
+   sh.bowtie2(**{'1' : sampR1, '2' : sampR2, 'x' : idxFolder, '_err' : log, '_out' : sam})
+   bam2fq(sam, outR1, '64')
+   bam2fq(sam, outR2, '128')
 
 
 ############
 # Pipeline #
 ############
-
+STAR_PREFIX = 'STAR_'
 
 def run(cfg, input1, input2, contams, log=None):
   p = partial(os.path.join, cfg.outdir)
-  _star1 = p("Unmapped.out.mate1")
-  _star2 = p("Unmapped.out.mate2")
+  _star1 = p("%sUnmapped.out.mate1" % STAR_PREFIX)
+  _star2 = p("%sUnmapped.out.mate2" % STAR_PREFIX)
   star1 = p("star.r1.fq")
   star2 = p("star.r2.fq")
   psf1 =  p( "psf.r1.fq"             )
@@ -443,6 +456,8 @@ def run(cfg, input1, input2, contams, log=None):
   if need(psf1):
     pricefilter(log, cfg, star1, star2, psf1, psf2)
 
+
+
   logtime('cd-hit-dup')
   if need(cd1):
     cdhitdup(log, cfg, psf1, psf2, cd1, cd2)
@@ -461,10 +476,15 @@ def run(cfg, input1, input2, contams, log=None):
   #if contR1 and contR2:
   if contams:
     idxFolder = p("contamIdx")
-    shutil.mkdir(idxFolder)
-    #map_contam(idxFolder, contR1, contR2,
-    #           _bowtie1, _bowtie2, contam_sam, marked1, marked2)
-    map_contam(idxFolder, contams,
+    #if not os.path.exists(idxFolder): os.mkdir(idxFolder)
+    fasta_contams = []
+    for c in contams:
+      fasta_name = str( p( Path(c).basename().stripext() + '.fasta' )  )
+      # gmap__build requires fasta, not fastq to build index from
+      SeqIO.convert(c, 'fastq', fasta_name, 'fasta')
+      fasta_contams.append(fasta_name)
+    #map_contam(idxFolder, contR1, contR2, _bowtie1, _bowtie2, contam_sam, marked1, marked2)
+    map_contam(log, idxFolder, fasta_contams,
                _bowtie1, _bowtie2, contam_sam, marked1, marked2)
 
   else:
