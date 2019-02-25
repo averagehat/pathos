@@ -56,6 +56,7 @@ properties:
       assembler:
         enum:
           - abyss
+          - ray2
       options:
         type: string
     required:

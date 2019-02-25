@@ -98,6 +98,7 @@ def main():
                       controls=' '.join(controls),
                       cfg=args['--config'],
                       odir=base_out)
+      temp.write("module load mpi\n")
       temp.write(cmd)
       temp.close()
       script = temp.name

@@ -345,11 +345,15 @@ def bam2fq(sam, outpath, pairflag):
   # https://support.bioconductor.org/p/68040/
   # https://www.biostars.org/p/323175/
   # it would be good to test this too lol in a unit test
+  # the contam number is just mapq
   with open(outpath, 'w') as outfile:
     #TODO: the following doesn't catch failures but errors with
     # a type error because line will be a list of [stdout, stderr] in the case
     # of error
     for line in proc.popen().iter_lines(retcode=None):
+      if isinstance(line, list):
+        line = line[0]
+        if not line: continue
       if line.startswith('@'):
         continue
       x = line.split('\t')
@@ -474,31 +478,37 @@ def run(cfg, input1, input2, contams, log=None):
   marked2 =   p( "contam_marked.R2.fastq" )
   contam_sam =  p("contam.sam")
   #if contR1 and contR2:
-  if contams:
-    idxFolder = p("contamIdx")
-    #if not os.path.exists(idxFolder): os.mkdir(idxFolder)
-    fasta_contams = []
-    for c in contams:
-      fasta_name = str( p( Path(c).basename().stripext() + '.fasta' )  )
-      # gmap__build requires fasta, not fastq to build index from
-      SeqIO.convert(c, 'fastq', fasta_name, 'fasta')
-      fasta_contams.append(fasta_name)
-    #map_contam(idxFolder, contR1, contR2, _bowtie1, _bowtie2, contam_sam, marked1, marked2)
-    map_contam(log, idxFolder, fasta_contams,
-               _bowtie1, _bowtie2, contam_sam, marked1, marked2)
+  if need(marked1):
+    if contams:
+      idxFolder = p("contamIdx")
+      #if not os.path.exists(idxFolder): os.mkdir(idxFolder)
+      fasta_contams = []
+      for c in contams:
+        fasta_name = str( p( Path(c).basename().stripext() + '.fasta' )  )
+        # gmap__build requires fasta, not fastq to build index from
+        SeqIO.convert(c, 'fastq', fasta_name, 'fasta')
+        fasta_contams.append(fasta_name)
+      #map_contam(idxFolder, contR1, contR2, _bowtie1, _bowtie2, contam_sam, marked1, marked2)
+      map_contam(log, idxFolder, fasta_contams,
+                 _bowtie1, _bowtie2, contam_sam, marked1, marked2)
 
-  else:
-    shutil.copy(_bowtie1, marked1)
-    shutil.copy(_bowtie2, marked2)
+    else: # this isn't actually necessary; could use the _bowtie1 since they get absorbed in assembly anyway
+      shutil.copy(_bowtie1, marked1)
+      shutil.copy(_bowtie2, marked2)
 
 
   logtime('abyss')
   if need(contigs):
-    abyss(log, cfg, _bowtie1, _bowtie2, contigs)
+    if cfg.assembly.assembler == 'ray2':
+      sh.ray_script(cfg, marked1, marked2, contigs, contigs_sam)
+    elif cfg.assembly.assembler == 'abyss':
+      abyss(log, cfg, marked1, marked2, contigs)
+    else:
+      raise ValueError("Config Assembler %s not supported" % cfg.assembly.assembler)
   if need(contigs_sam):
     contigs_index = 'contigs-b2'
     sh.bowtie2_build(contigs, contigs_index)
-    sh.bowtie2(**{'1' : _bowtie1, '2' : _bowtie2, 'x' : contigs_index,
+    sh.bowtie2(**{'1' : marked1, '2' : marked2, 'x' : contigs_index,
                   '_err' : log, '_out' : contigs_sam})
     # TODO: refactor below so that it works for R1 and NT. probably just drop
     # R2. what does pathdiscov do?
