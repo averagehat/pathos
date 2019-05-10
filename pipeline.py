@@ -390,6 +390,9 @@ def map_contam(log, idxFolder, contams, sampR1, sampR2, sam, outR1, outR2):
 # Pipeline #
 ############
 STAR_PREFIX = 'STAR_'
+def skip(input1, input2, o1 ,o2):
+    shutil.copy(input1, o1)
+    shutil.copy(input2, o2)
 
 def run(cfg, input1, input2, contams, log=None):
   p = partial(os.path.join, cfg.outdir)
@@ -416,12 +419,12 @@ def run(cfg, input1, input2, contams, log=None):
   contig_nt = p('contigs.nt.blast')
 
   dup_nt = p('contigs.nt.blast.dup')
-  dup_nr = p('conrigs.nr.blast.dup')
+  dup_nr = p('contigs.nr.blast.dup')
   contig_kronaNT = p('contigs.nt.html')
   contig_kronaNR = p('contigs.nr.html')
 
   contig_nt_tsv = p("contigs.nt.tsv")
-  conrig_nr_tsv = p("conrigs.nr.tsv")
+  contig_nr_tsv = p("contigs.nr.tsv")
   nt_tsv = p('nt.tsv')
   nr_tsv = p('nr.tsv')
 #  bowtie1 =   p( "bowtie.r1.fa" )
@@ -468,7 +471,10 @@ def run(cfg, input1, input2, contams, log=None):
 
   logtime('lzw_filter_fastq')
   if need(lzw1):
-    lzw_filter_fastq(log, cfg, cd1, cd2, lzw1, lzw2)
+    if not cfg.lzwfilter.minCompressionScore:
+      skip(cd1, cd2, lzw1, lzw2)
+    else:
+      lzw_filter_fastq(log, cfg, cd1, cd2, lzw1, lzw2)
 
   logtime('bowtie_sensitive')
   if need(_bowtie1):
@@ -497,10 +503,12 @@ def run(cfg, input1, input2, contams, log=None):
       shutil.copy(_bowtie2, marked2)
 
 
-  logtime('abyss')
+  logtime('assembly')
   if need(contigs):
     if cfg.assembly.assembler == 'ray2':
-      sh.ray_script(cfg, marked1, marked2, contigs, contigs_sam)
+      import subprocess
+      subprocess.check_call(' '.join(['ray_script', str(marked1), str(marked2), str(contigs), str(contigs_sam)]), shell=True)
+      #sh.ray_script(marked1, marked2, contigs, contigs_sam)
     elif cfg.assembly.assembler == 'abyss':
       abyss(log, cfg, marked1, marked2, contigs)
     else:
@@ -575,6 +583,7 @@ def run2(cfg, log, base_out, fastqs_and_controls):
   NOTE: this requires that they were passed in the correct way!
   fastqs_and_controls is a tuple of the flie-lists'''
   fastqs, controls = fastqs_and_controls
+  controls = controls if controls else []
   fastqs, controls = list(fastqs), list(controls)
   print 'FASTQS : %s' % fastqs, 'CONTROLS : %s' % controls
   assert len(fastqs) > 1 and (len(fastqs) % 2) == 0, "Must provide an even number of input files."
@@ -584,7 +593,7 @@ def run2(cfg, log, base_out, fastqs_and_controls):
   cfg2 = Config(cfg.__dict__) # I'm not sure if this obj is shared with other processes
   cfg2.outdir = outdir
   p = partial(os.path.join, outdir)
-  if not os.path.exists(outdir): os.mkdir(outdir)
+  if not os.path.exists(outdir): os.makedirs(outdir)
   if len(fastqs) > 2:
     r1 = p("input_merged.r1.fq")
     r2 = p("input_merged.r2.fq")
