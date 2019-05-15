@@ -9,17 +9,19 @@ bowtie2:
 gsnap:
   gsnapDB: /fakepath/
 star:
-  starDB: /media/People/michael.panciera/path-pipe/star-index-dir/
+  starDB: /media/People/michael.panciera/CURRENT/pathos/install/star-index-dir/
 threads: 16
 assembly:
-  assembler: abyss
+  assembler: ray2
   options: " "
 cdhitdup:
   minDifference: 5
 ncbi:
   ntDB: /media/VD_Research/databases/ncbi/blast/nt/nt
   nrDB: /media/VD_Research/databases/ncbi/blast/nr/nr
+  ktTaxonomy: /u/michael.panciera/myconda/opt/krona/taxonomy
+  ignore: /media/VD_Research/Admin/PBS/Software/krona/
 lzwfilter:
-  minCompressionScore: 0.55
+  minCompressionScore: 0
 blastn:
   max_target_seqs: 3

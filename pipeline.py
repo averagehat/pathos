@@ -121,7 +121,7 @@ def blastn(log, cfg, fq, out):
     sh.blastn('-max_target_seqs', cfg.blastn.max_target_seqs, outfmt=6, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out, _long_prefix='-')
 
 def krona(log, cfg, blast, out):
-    sh.ktImportBLAST(blast, o=out, _err=log, _out=log) # probably need config for kronadb!
+    sh.ktImportBLAST(blast, '-tax', cfg.ncbi.ktTaxonomy, o=out, _err=log, _out=log) # probably need config for kronadb!
 
 
 def blastx(log, cfg, fq, out):
@@ -181,7 +181,8 @@ def sum_sam_by_ref(log, cfg, sam):
         fields = line.split('\t')
         ref, qname = fields[2], fields[0]
         count_d[ref] = count_d.get(ref, 0) + 1
-        contam_d[ref] = contam_d.get(ref, 0) + int(CONTAM_FLAG in qname)
+        # contam_d[ref] = contam_d.get(ref, 0) + int(CONTAM_FLAG in qname)
+        contam_d[ref] = int(bool((qname.split(CONTAM_FLAG + '=')[-1])))
     return count_d, contam_d
 
 #    refs = imap(lambda x: x.split('\t')[2], res)
@@ -526,16 +527,16 @@ def run(cfg, input1, input2, contams, log=None):
     blastn(log, cfg, contigs, contig_nt)
     dup_blast(log, contigs_sam, contig_nt, dup_nt)
 
-  logtime('blastx')
-  if need(contig_nr):
-    blastx(log, cfg, contigs, contig_nr)
-    dup_blast(log, contigs_sam, contig_nr, dup_nr)
+#  logtime('blastx')
+#  if need(contig_nr):
+#    blastx(log, cfg, contigs, contig_nr)
+#    dup_blast(log, contigs_sam, contig_nr, dup_nr)
 
   logtime('krona')
   if need(contig_kronaNT):
     krona(log, cfg, contig_nt, contig_kronaNT)
-  if need(contig_kronaNR):
-    krona(log, cfg, contig_nr, contig_kronaNR)
+#  if need(contig_kronaNR):
+#    krona(log, cfg, contig_nr, contig_kronaNR)
 
   logtime('blast2summary')
   if need(with_tax_tsv):

@@ -88,6 +88,9 @@ properties:
       nrDB:
         type: string
         pattern: ^(/[^/]+)+$
+      ktTaxonomy:
+        type: string
+        pattern: ^(/[^/]+)+$
   blastn:
     type: object
     properties:
