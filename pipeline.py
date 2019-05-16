@@ -386,6 +386,14 @@ def map_contam(log, idxFolder, contams, sampR1, sampR2, sam, outR1, outR2):
    bam2fq(sam, outR1, '64')
    bam2fq(sam, outR2, '128')
 
+def seq_under_length(length, seq):
+  return len(seq.seq) < length
+
+def filter_contigs(min_length, inc, outc):
+  raw_seqs = SeqIO.parse(inc, 'fasta')
+  filtered_seqs = ifilter(partial(seq_under_length, min_length), raw_seqs)
+  with open(outc, 'w') as out:
+    SeqIO.write(filtered_seqs, out, 'fasta')
 
 ############
 # Pipeline #
@@ -413,7 +421,8 @@ def run(cfg, input1, input2, contams, log=None):
   _bowtie1 =   p( "bowtie.1.1" )
   _bowtie2 =   p( "bowtie.2.1" )
 
-  contigs = p("abyss-contigs.fa")
+  unfiltered_contigs = p("abyss-contigs.fa")
+  contigs = p("filtered-contigs.fa")
   contigs_sam = 'contigs.sam'
 
   contig_nr = p('contigs.nr.blast')
@@ -508,15 +517,16 @@ def run(cfg, input1, input2, contams, log=None):
   if need(contigs):
     if cfg.assembly.assembler == 'ray2':
       import subprocess
-      subprocess.check_call(' '.join(['ray_script', str(marked1), str(marked2), str(contigs), str(contigs_sam)]), shell=True)
+      subprocess.check_call(' '.join(['ray_script', str(marked1), str(marked2), str(unfiltered_contigs), str(contigs_sam)]), shell=True)
       #sh.ray_script(marked1, marked2, contigs, contigs_sam)
     elif cfg.assembly.assembler == 'abyss':
-      abyss(log, cfg, marked1, marked2, contigs)
+      abyss(log, cfg, marked1, marked2, unfiltered_contigs)
     else:
       raise ValueError("Config Assembler %s not supported" % cfg.assembly.assembler)
+    filter_contigs(cfg.assembly.minimum_contig_length, unfiltered_contigs, contigs)
   if need(contigs_sam):
     contigs_index = 'contigs-b2'
-    sh.bowtie2_build(contigs, contigs_index)
+    sh.bowtie2_build(unfiltered_contigs, contigs_index)
     sh.bowtie2(**{'1' : marked1, '2' : marked2, 'x' : contigs_index,
                   '_err' : log, '_out' : contigs_sam})
     # TODO: refactor below so that it works for R1 and NT. probably just drop

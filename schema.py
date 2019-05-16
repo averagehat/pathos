@@ -59,9 +59,14 @@ properties:
           - ray2
       options:
         type: string
+      minimum_contig_length:
+          type: integer
+          minimum: 1
+          maximum: 10000000
     required:
       - assembler
       - options
+      - minimum_contig_length:
     additionalProperties: false
   cdhitdup:
     type: object
@@ -89,6 +94,12 @@ properties:
       nrDB:
         type: string
         pattern: ^(/[^/]+)+$
+      ktTaxonomy:
+        type: string
+        pattern: ^(/[^/]+)+$
+      required:
+        - ntDB
+        - ktTaxonomy
   blastn:
     type: object
     properties:
