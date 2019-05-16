@@ -19,5 +19,5 @@ $cmd
 
 cp $OUTDIR/ray2_assembly_1.fasta $OUTFILE
 
-samtools view $OUTDIR/bowtie2_mapping/out.bam > $SAMFILE
+samtools view -h $OUTDIR/bowtie2_mapping/out.bam > $SAMFILE
 
