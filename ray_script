@@ -17,7 +17,7 @@ cmd="ray2_assembly.pl --R1 $R1 --R2 $R2 --sample RAY --outputdir $OUTDIR --logs 
 echo $cmd
 $cmd
 
-cp $OUTDIR/ray2_assembly_1.fasta $OUTFILE
+cp $OUTDIR/ray2_assembly_1.fasta $FASTA
 
 samtools view -h $OUTDIR/bowtie2_mapping/out.bam > $SAMFILE
 
