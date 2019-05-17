@@ -66,7 +66,7 @@ properties:
     required:
       - assembler
       - options
-      - minimum_contig_length:
+      - minimum_contig_length
     additionalProperties: false
   cdhitdup:
     type: object
@@ -97,9 +97,9 @@ properties:
       ktTaxonomy:
         type: string
         pattern: ^(/[^/]+)+$
-      required:
-        - ntDB
-        - ktTaxonomy
+    required:
+      - ntDB
+      - ktTaxonomy
   blastn:
     type: object
     properties:
