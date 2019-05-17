@@ -40,7 +40,7 @@ from jsonschema import validate
 #  - Does abyss record number of reads into contig? # no, it's just length and "kmer coverage"
 #  - could duplicate contig blast entry for each read that maps to it and pass to krona
 
-CONTAM_FLAG = 'CONTAM'
+CONTAM_FLAG = 'CONTAM_MAPQ'
 def lzw(sequence):
 # https://github.com/betegonm/gen/blob/64aef21cfeefbf27b1e2bd6587c555d4df4f6913/gen.py#L294
   output = []
@@ -182,7 +182,8 @@ def sum_sam_by_ref(log, cfg, sam):
         ref, qname = fields[2], fields[0]
         count_d[ref] = count_d.get(ref, 0) + 1
         # contam_d[ref] = contam_d.get(ref, 0) + int(CONTAM_FLAG in qname)
-        contam_d[ref] = int(bool((qname.split(CONTAM_FLAG + '=')[-1])))
+        #contam_d[ref] = int(bool((qname.split(CONTAM_FLAG + '=')[-1])))
+        contam_d[ref] = int((CONTAM_FLAG + '=') in qname)
     return count_d, contam_d
 
 #    refs = imap(lambda x: x.split('\t')[2], res)
@@ -358,7 +359,7 @@ def bam2fq(sam, outpath, pairflag):
       if line.startswith('@'):
         continue
       x = line.split('\t')
-      qname, ref, mapq, seq, qual = x[0], x[1], x[4], x[9], x[10]
+      qname, ref, mapq, seq, qual = x[0], x[2], x[4], x[9], x[10]
       if ref != '*':
         qname += ":%s=%s" % (CONTAM_FLAG, mapq)
       entry = "@{}\n{}\n+\n{}\n".format(qname, seq, qual)
@@ -524,7 +525,7 @@ def run(cfg, input1, input2, contams, log=None):
     else:
       raise ValueError("Config Assembler %s not supported" % cfg.assembly.assembler)
     filter_contigs(cfg.assembly.minimum_contig_length, unfiltered_contigs, contigs)
-  if need(contigs_sam):
+  if need(contigs_sam): # shouldn't happen w/ ray because ray_script copies over a bam
     contigs_index = 'contigs-b2'
     sh.bowtie2_build(unfiltered_contigs, contigs_index)
     sh.bowtie2(**{'1' : marked1, '2' : marked2, 'x' : contigs_index,
