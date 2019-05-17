@@ -429,6 +429,8 @@ def run(cfg, input1, input2, contams, log=None):
   contig_nr = p('contigs.nr.blast')
   contig_nt = p('contigs.nt.blast')
 
+  contig_nt_flagged = p('contigs.nt.flagged.tsv')
+
   dup_nt = p('contigs.nt.blast.dup')
   dup_nr = p('contigs.nr.blast.dup')
   contig_kronaNT = p('contigs.nt.html')
@@ -553,11 +555,15 @@ def run(cfg, input1, input2, contams, log=None):
   if need(with_tax_tsv):
     blast2summary(cfg.ncbi.ntDB, contig_nt, with_tax_tsv) # this is shared by read files
     # the below is for contigs only.
+
   if need(contigs_meta):
       # can check for CONTAM flag
     readcounts_to_tsv(contigs_sam, contigs_meta)
   if need(contig_nt_tsv):
-    join_csv(contigs_meta, with_tax_tsv, SEQID, contig_nt_tsv)
+      # joins on SEQID, which collapses data.
+    import diff_ranks
+    diff_ranks.flag_annotated_blast(with_tax_tsv, contig_nt_flagged)
+    join_csv(contigs_meta, contig_nt_flagged, SEQID, contig_nt_tsv)
 
   logtime('finished!')
 #  def mksummary(db, blast, s):

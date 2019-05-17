@@ -52,6 +52,46 @@ def differing_rank(rows):
 
   return differ_at
 
+# TODO
+# groupby blast input by field 1 (contig name=c1, c2 .  . . .
+# pick the top blast hit (should be first entry
+# keep the info relevant to the top hit (pid, tax, etc.)
+# collapse diff_ranks
+# add diff_ranks as a field
+#
+# todo some point: normalize contig names
+# meta tsv wasn't created ?
+# readcount is a float somehow and it shouldn't be
+# readcount is coming out blank sometimes in contigs.nt.tsv
+# RAYOUT/contig_numreads.txt is not being used -- can't use it
+# because it forgets what reads contribute to a contig
+# and we need to calculate the contam-percentage
+# should we just map the contaminants back to the contig?
+# I'm getting contam=0 probably where I should get no flag at all.
+#      if ref != '*':
+#        qname += ":%s=%s" % (CONTAM_FLAG, mapq)
+#  contam.sam is missing
+
+from toolz.dicttoolz import merge
+import itertools
+from itertools import groupby
+def flag(group_obj):
+  group = list(group_obj[1])
+  rank = differing_rank(group)
+  add_rank = lambda x: merge(x, {'different_rank' : rank})
+  return map(add_rank, group)
+
+def flag_annotated_blast(input_fn, output_fn):
+  with open(input_fn) as f_in, open(output_fn, 'w') as f_out:
+    rows = list(csv.DictReader(f_in, delimiter='\t'))
+    groups = groupby(rows, lambda x: x['qseqid'])
+    flagged_rows = list(itertools.chain(*map(flag, groups)))
+    writer = csv.DictWriter(f_out, flagged_rows[0].keys(), delimiter='\t')
+    writer.writeheader()
+    for row in flagged_rows:
+      writer.writerow(row)
+
+
 
 if __name__ == '__main__':
   print test_differing_rank()
