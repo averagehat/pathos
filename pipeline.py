@@ -387,12 +387,12 @@ def map_contam(log, idxFolder, contams, sampR1, sampR2, sam, outR1, outR2):
    bam2fq(sam, outR1, '64')
    bam2fq(sam, outR2, '128')
 
-def seq_under_length(length, seq):
-  return len(seq.seq) < length
+def seq_reaches_length(length, seq):
+  return len(seq.seq) >= length
 
 def filter_contigs(min_length, inc, outc):
   raw_seqs = SeqIO.parse(inc, 'fasta')
-  filtered_seqs = ifilter(partial(seq_under_length, min_length), raw_seqs)
+  filtered_seqs = ifilter(partial(seq_reaches_length, min_length), raw_seqs)
   with open(outc, 'w') as out:
     SeqIO.write(filtered_seqs, out, 'fasta')
 
