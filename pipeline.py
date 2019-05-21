@@ -451,8 +451,8 @@ def run(cfg, input1, input2, contams, log=None):
 #  kronaNT2  = p( "r2.NT.html" )
 #  kronaNR1  = p( "r1.NR.html" )
 #  kronaNR2  = p( "r2.NR.html" )
-  with_tax_tsv = 'contigs.blast.tax.tsv'
-  contigs_meta = 'contigs.meta.tsv'
+  with_tax_tsv = p('contigs.blast.tax.tsv')
+  contigs_meta = p('contigs.meta.tsv')
 
   if not log:
     log = sys.stdout
