@@ -11,7 +11,7 @@ Options:
 '''
 import sh
 from itertools import imap, izip, tee, chain, groupby, ifilter, starmap
-from toolz.dicttoolz import keymap,valfilter,keyfilter,merge
+from toolz.dicttoolz import keymap,valfilter,keyfilter,merge,assoc
 from toolz.itertoolz import mapcat, partition
 from funcy.seqs import _icut
 from docopt import docopt
@@ -174,7 +174,7 @@ def lzw_filter_fastq(log, cfg, r1, r2, out1, out2):
     filter_pair(lzw_func, r1, r2, out1, out2, 'fastq')
 
 def sum_sam_by_ref(log, cfg, sam):
-    res = sh.samtools.view(sam, F=260)
+    res = sh.samtools.view(sam, S=True, F=260)
     count_d = {}
     contam_d  = {}
     for line in  res:
@@ -308,10 +308,24 @@ def blast2summary_dict(db, blastpath): # (Path, Path) -> list[dict]
   rows = list(rows)
   seqids = map(get('sseqid'), rows)
   taxids = get_taxid(db, seqids)
-  gis = (s.split('|')[1] for s in seqids)
-  matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
+  def get_gi(s):
+    fields = s.split('|')
+    if len(fields) > 1:
+        return fields[1]
+    else:
+        raise ValueError("Seq ID %s is missing GI fields and '|'" % s)
+  gis = imap(get_gi, seqids)
+  #TODO: change matches to use something unique--not the TAXID! actually, why is it a dict
+  # in the first place? it should be a list of dictionaries, and then map over
+  # the dictionaries to merge them with the taxonomy info
+  # this will replace the lines:
+  # matches = . . .
+  # items = . . .
+  #matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
   ncbi = NCBITaxa() # downloads database and creates SQLite database if needed
-  items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
+ # items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
+  matches = [assoc(row, 'taxid', taxids[gi]) for gi, row in zip(gis, rows) if gi in taxids]
+  items = [merge(row1, taxonomy(ncbi, row1['taxid'])) for row1 in matches]
   res =  imap(partial(keyfilter, csv_fields.__contains__), items)
   return res
   #return {k:v for k, v in items if k in fields}
@@ -424,7 +438,7 @@ def run(cfg, input1, input2, contams, log=None):
 
   unfiltered_contigs = p("abyss-contigs.fa")
   contigs = p("filtered-contigs.fa")
-  contigs_sam = 'contigs.sam'
+  contigs_sam = p('contigs.sam')
 
   contig_nr = p('contigs.nr.blast')
   contig_nt = p('contigs.nt.blast')
