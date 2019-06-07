@@ -118,14 +118,16 @@ def rapsearch(log, cfg, fq, out):
 def blastn(log, cfg, fq, out):
     print "attempting blast with %s %s" % (fq, out)
     #sh_.blastn(outfmt=6, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out)
-    sh.blastn('-max_target_seqs', cfg.blastn.max_target_seqs, outfmt=6, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out, _long_prefix='-')
+    outformat = " ".join(["6"] + blast_columns)
+    sh.blastn('-max_target_seqs', cfg.blastn.max_target_seqs, outfmt=outformat, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out, _long_prefix='-')
 
 def krona(log, cfg, blast, out):
     sh.ktImportBLAST(blast, '-tax', cfg.ncbi.ktTaxonomy, o=out, _err=log, _out=log) # probably need config for kronadb!
 
 
 def blastx(log, cfg, fq, out):
-    sh.blastx('-max_target_seqs', '1', outfmt=6, db=cfg.ncbi.nrDB, query=fq, _err=log, _out=out, _long_prefix='-')
+    outformat = " ".join(["6"] + blast_columns)
+    sh.blastx('-max_target_seqs', '1', outfmt=outformat, db=cfg.ncbi.nrDB, query=fq, _err=log, _out=out, _long_prefix='-')
 
 def abyss(log, cfg, r1, r2, out):
     out = Path(out)
@@ -227,12 +229,24 @@ def dup_blast(log, sam, blst, out):
     log.write("Skipped Contigs:\n======\n")
     with open(out, 'w') as f:
         with open(blst, 'r') as blast:
-            for k,v in groupby(blast, lambda x: x.split('\t')[0]):
+            for k,_v in groupby(blast, lambda x: x.split('\t')[blast_columns.index('qseqid')]):
                 if k not in counter:
-                    contig_length = next(v).split('\t')[3]
-                    log.write("Contig %s of length %s had no mapped reads.\n" % (k, contig_length))
+                    #contig_length = next(v).split('\t')[3]
+                    #log.write("Contig %s of length %s had no mapped reads.\n" % (k, contig_length))
+                    log.write("Contig %s has no mapped reads.\n" % k)
                 else:
-                    f.writelines(list(v) * counter[k])
+                    #import ipdb; ipdb.set_trace()
+                    def add_id(i, line):
+                        # k is the contig ID
+                        return '\t'.join(['%s-%d' % (k, i)] + line.split('\t')[1:])
+                    v = list(_v)
+                    repeat_count = (counter[k] / len(v)) or 1
+                    # total number of duplicates will equal the read_count
+                    repeated = v * repeat_count
+                    with_unique_ids = list(starmap(add_id, enumerate(repeated)))
+
+                    f.writelines(with_unique_ids) # with_unique_id = starmap(add_id, enumerate(v))
+                    #f.writelines(list(v) * counter[k])
     log.write("======\n")
 
 
@@ -299,12 +313,18 @@ def taxonomy(ncbi, taxid):
             yield (ranks[lin], names[lin])
     return dict(make_d(lineage, ranks, names))
 def dictmap(f, d): return starmap(f, d.items())
-csv_fields = ['superkingdom','kingdom','superfamily','genus','qend','bitscore','family','evalue','gapopen','pid','send','order','class','phylum','alnlen','species','sseqid','qseqid','qstart','sstart']
+# ['superkingdom','kingdom','superfamily','genus','family','order','class','phylum','species']
+ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'superfamily', 'family', 'genus', 'species']
+blast_columns = "sseqid qlen pident length mismatch evalue qseqid sscinames scomnames sblastnames stitle staxids".split()
+csv_fields = blast_columns + ranks
+# csv_fields = ['superkingdom','kingdom','superfamily','genus','qend','bitscore','family','evalue','gapopen','pid','send','order','class','phylum','alnlen','species','sseqid','qseqid','qstart','sstart']
+csv_fields = blast_columns + ranks
 def blast2summary_dict(db, blastpath): # (Path, Path) -> list[dict]
 
   """Reading in a blast output file, lookup all seqids to get taxids with a single blastdbcmd.
   Then, lookup the taxonomy using ETE2 via the taxid, and add that info to the blast info."""
-  rows = csv.DictReader(open(blastpath), delimiter='\t',fieldnames=[SEQID, 'sseqid','pid', 'alnlen','gapopen','qstart','qend','sstart','send','evalue','bitscore'])
+  # rows = csv.DictReader(open(blastpath), delimiter='\t',fieldnames=[SEQID, 'sseqid','pid', 'alnlen','gapopen','qstart','qend','sstart','send','evalue','bitscore'])
+  rows = csv.DictReader(open(blastpath), delimiter='\t',fieldnames=blast_columns)
   rows = list(rows)
   seqids = map(get('sseqid'), rows)
   taxids = get_taxid(db, seqids)
@@ -449,6 +469,8 @@ def run(cfg, input1, input2, contams, log=None):
   dup_nr = p('contigs.nr.blast.dup')
   contig_kronaNT = p('contigs.nt.html')
   contig_kronaNR = p('contigs.nr.html')
+  contig_kronaNT_dup = p('contigs.nt.DUP.html')
+  contig_kronaNR_dup = p('contigs.nr.DUP.html')
 
   contig_nt_tsv = p("contigs.nt.tsv")
   contig_nr_tsv = p("contigs.nr.tsv")
@@ -562,6 +584,8 @@ def run(cfg, input1, input2, contams, log=None):
   logtime('krona')
   if need(contig_kronaNT):
     krona(log, cfg, contig_nt, contig_kronaNT)
+  if need(contig_kronaNT_dup):
+    krona(log, cfg, dup_nt, contig_kronaNT_dup)
 #  if need(contig_kronaNR):
 #    krona(log, cfg, contig_nr, contig_kronaNR)
 
