@@ -98,7 +98,7 @@ def main():
                       controls=' '.join(controls),
                       cfg=args['--config'],
                       odir=base_out)
-      temp.write("module load mpi\n")
+      temp.write("module load mpi\nmodule load bowtie\nmodule load blast\n")
       temp.write(cmd)
       temp.close()
       script = temp.name
@@ -108,8 +108,12 @@ def main():
       sh.qsub(script,
               '-N',  "sheet-sample-%s" % sample_num,
               # "-M", "EMAIL HERE",
-              '-l', "nodes=1:ppn=4")
+              # '-l', "nodes=1:ppn=8:mem=80514472881")
+              '-l', "nodes=1:ppn=12",
+              '-l', "mem=80514472881")
       print "Running %s" % script
+  else:
+    print "No --qsub flag, didn't run anything."
 #  if p:
 #
 #  else:
