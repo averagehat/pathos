@@ -450,8 +450,8 @@ def run(cfg, input1, input2, contams, log=None):
   cd1 =       p( "cd.r1.fq" )
   cd2 =       p( "cd.r2.fq" )
 
-  lzw1 = "lzw.r1"
-  lzw2 = "lzw.r2"
+  lzw1 = p("lzw.r1")
+  lzw2 = p("lzw.r2")
 
   _bowtie1 =   p( "bowtie.1.1" )
   _bowtie2 =   p( "bowtie.2.1" )
