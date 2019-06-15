@@ -4,7 +4,8 @@ R1=$1
 R2=$2
 FASTA=$3
 SAMFILE=$4
-PARAM=/media/VD_Research/Admin/PBS/Software/configs/param.txt
+PARAM=/media/VD_Research/Admin/PBS/Software/pathos/param.txt
+
 PATHOSDIR=$(dirname $FASTA)
 OUTDIR=$(dirname $FASTA)/RAYOUT
 LOGDIR=$(dirname $FASTA)/raylogs/
