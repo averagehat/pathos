@@ -223,9 +223,18 @@ def fasta_add_metadata(fasta, tsv, fasta_out):
         rec.id += annotate(meta)
     with open(fasta_out, 'w') as out:
             SeqIO.write(fa, out, 'fasta')
+from StringIO import StringIO
+def bam_to_counter(bam):
+    # needs to be sorted and indexed
+    sh.samtools.index(bam)
+    idxstats = sh.samtools.idxstats(bam).stdout
+    #idxstats = '\n'.join(idxstats)
+    idxstats_dict = csv.reader(StringIO(idxstats), delimiter='\t')
+    ref_counts = dict([(ref, int(mapped)) for (ref, _, mapped, _) in idxstats_dict if ref != '*'])
+    return Counter(ref_counts)
 
-def dup_blast(log, sam, blst, out):
-    counter, _ = sum_sam_by_ref(None, None, sam)
+def dup_blast(log, counter, blst, out):
+    # counter, _ = sum_sam_by_ref(None, None, sam)
     log.write("Skipped Contigs:\n======\n")
     with open(out, 'w') as f:
         with open(blst, 'r') as blast:
@@ -460,6 +469,8 @@ def run(cfg, input1, input2, contams, log=None):
   contigs = p("filtered-contigs.fa")
   contigs_sam = p('contigs.sam')
 
+  ray_bam =  p('RAYOUT/bowtie2_mapping/out.bam')
+
   contig_nr = p('contigs.nr.blast')
   contig_nt = p('contigs.nt.blast')
 
@@ -574,7 +585,8 @@ def run(cfg, input1, input2, contams, log=None):
   logtime('blastn')
   if need(contig_nt):
     blastn(log, cfg, contigs, contig_nt)
-    dup_blast(log, contigs_sam, contig_nt, dup_nt)
+    counter = sum_sam_by_ref(None, None, sam)
+    dup_blast(log, counter, contig_nt, dup_nt)
 
 #  logtime('blastx')
 #  if need(contig_nr):
