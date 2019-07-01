@@ -102,13 +102,13 @@ def cdhitdup(log, cfg, r1, r2, o1, o2):
     sh_.cd_hit_dup(i=r1, i2=r2, o=o1, o2=o2, e=cfg.cdhitdup.minDifference, _err=log, _out=log)
 
 # LZW!
-
 def bowtie_sensitive(log, cfg, r1, r2, o1):
     args = {'1' : r1, '2' : r2,
                 'very_sensitive_local' : True,
                 'un_conc' : Path(o1).splitext()[0],
                 'x' : cfg.bowtie2.bowtieDB,
-            '_err' : log, '_out' : log}
+            # '_err' : log, '_out' : log}
+            '_err' : log}
     sh.bowtie2(**args)
 
 def rapsearch(log, cfg, fq, out):
@@ -211,6 +211,16 @@ def readcounts_to_tsv(sam, out):
        # writer.writerow([SEQID,'read_count'])
        # writer.writerows(counter.items())
 
+
+#TODO:
+# * use existing contig index
+# * make sure there are contam reads as input
+# * map with bowtie, same way as read_counts is generated
+# * extract read_count via idxstats into a csv, using the SEQID label and "contam_mapped"
+# * use the existing join function to join on SEQID after joining read_count
+# * ! currently need to load bowtie and blast as modules
+
+
 def fasta_add_metadata(fasta, tsv, fasta_out):
     meta = csv.DictReader(open(tsv), delimiter='\t')
     fa = list(SeqIO.parse(fasta, 'fasta'))
@@ -224,14 +234,30 @@ def fasta_add_metadata(fasta, tsv, fasta_out):
     with open(fasta_out, 'w') as out:
             SeqIO.write(fa, out, 'fasta')
 from StringIO import StringIO
-def bam_to_counter(bam):
-    # needs to be sorted and indexed
+# def bam_to_counter(bam):
+def get_idxstats(bam):
+    # assumes bam is sorted, and being indexed will speed up significantly
     sh.samtools.index(bam)
-    idxstats = sh.samtools.idxstats(bam).stdout
+    idxstats_str = sh.samtools.idxstats(bam).stdout
+    idxstats = csv.reader(StringIO(idxstats_str), delimiter='\t')
+    return idxstats
+
+def bam_to_mapped_tsv(bam, mapped_field, out):
+    # needs to be sorted and indexed
     #idxstats = '\n'.join(idxstats)
-    idxstats_dict = csv.reader(StringIO(idxstats), delimiter='\t')
-    ref_counts = dict([(ref, int(mapped)) for (ref, _, mapped, _) in idxstats_dict if ref != '*'])
-    return Counter(ref_counts)
+    #idxstats_dict = csv.reader(StringIO(idxstats), delimiter='\t')
+    # sequence name, sequence length, mapped, unmapped
+    idxstats = get_idxstats(bam)
+    name_and_mapped = [ { SEQID : x[0], mapped_field : x[2]}  for x in idxstats]
+    with open(out, 'w') as o:
+      writer = csv.DictWriter(o, [SEQID, mapped_field], delimiter='\t')
+      writer.writeheader()
+      writer.writerows(name_and_mapped)
+
+
+
+#    ref_counts = dict([(ref, int(mapped)) for (ref, _, mapped, _) in idxstats_dict if ref != '*'])
+#    return Counter(ref_counts)
 
 def dup_blast(log, counter, blst, out):
     # counter, _ = sum_sam_by_ref(None, None, sam)
@@ -324,7 +350,9 @@ def taxonomy(ncbi, taxid):
 def dictmap(f, d): return starmap(f, d.items())
 # ['superkingdom','kingdom','superfamily','genus','family','order','class','phylum','species']
 ranks = ['superkingdom', 'kingdom', 'phylum', 'class', 'order', 'superfamily', 'family', 'genus', 'species']
-blast_columns = "sseqid qlen pident length mismatch evalue qseqid sscinames scomnames sblastnames stitle staxids".split()
+#@ blast_columns = "sseqid qlen pident length mismatch evalue qseqid sscinames scomnames sblastnames stitle staxids".split()
+blast_columns = "qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen stitle sscinames scomnames sblastnames staxids".split()
+# blast_columns = "sseqid qlen pident length mismatch evalue qseqid sscinames scomnames sblastnames stitle staxids".split()
 csv_fields = blast_columns + ranks
 # csv_fields = ['superkingdom','kingdom','superfamily','genus','qend','bitscore','family','evalue','gapopen','pid','send','order','class','phylum','alnlen','species','sseqid','qseqid','qstart','sstart']
 csv_fields = blast_columns + ranks
@@ -438,6 +466,20 @@ def filter_contigs(min_length, inc, outc):
   filtered_seqs = ifilter(partial(seq_reaches_length, min_length), raw_seqs)
   with open(outc, 'w') as out:
     SeqIO.write(filtered_seqs, out, 'fasta')
+
+def merge_fastqs(fastqs, r1, r2):
+  if len(fastqs) > 2:
+    x1s, x2s = fastqs[0::2], fastqs[1::2]
+    with open(r1, 'wb') as o1:
+      with open(r2, 'wb') as o2:
+        for x1, x2 in zip(x1s, x2s):
+          with open(x1, 'rb') as i1:
+            shutil.copyfileobj(i1, o1) #, 1024*1024*10)
+          with open(x2, 'rb') as i2:
+            shutil.copyfileobj(i2, o2)
+  else:
+    r1, r2 = fastqs[0], fastqs[1]
+  return r1, r2
 
 ############
 # Pipeline #
@@ -574,9 +616,11 @@ def run(cfg, input1, input2, contams, log=None):
     else:
       raise ValueError("Config Assembler %s not supported" % cfg.assembly.assembler)
     filter_contigs(cfg.assembly.minimum_contig_length, unfiltered_contigs, contigs)
+  contigs_index = p('contigs-b2')
   if need(contigs_sam): # shouldn't happen w/ ray because ray_script copies over a bam
-    contigs_index = 'contigs-b2'
-    sh.bowtie2_build(unfiltered_contigs, contigs_index)
+    # NOTE: used to be a mapping onto unfiltered contigs
+    # sh.bowtie2_build(unfiltered_contigs, contigs_index)
+    sh.bowtie2_build(contigs, contigs_index)
     sh.bowtie2(**{'1' : marked1, '2' : marked2, 'x' : contigs_index,
                   '_err' : log, '_out' : contigs_sam})
     # TODO: refactor below so that it works for R1 and NT. probably just drop
@@ -585,8 +629,9 @@ def run(cfg, input1, input2, contams, log=None):
   logtime('blastn')
   if need(contig_nt):
     blastn(log, cfg, contigs, contig_nt)
-    counter = sum_sam_by_ref(None, None, sam)
+    counter, _ = sum_sam_by_ref(None, None, contigs_sam)
     dup_blast(log, counter, contig_nt, dup_nt)
+
 
 #  logtime('blastx')
 #  if need(contig_nr):
@@ -609,11 +654,32 @@ def run(cfg, input1, input2, contams, log=None):
   if need(contigs_meta):
       # can check for CONTAM flag
     readcounts_to_tsv(contigs_sam, contigs_meta)
-  if need(contig_nt_tsv):
+
+  contig_nt_almost = p("contigs.nt.almost")
+  if need(contig_nt_almost):
       # joins on SEQID, which collapses data.
     import diff_ranks
     diff_ranks.flag_annotated_blast(with_tax_tsv, contig_nt_flagged)
-    join_csv(contigs_meta, contig_nt_flagged, SEQID, contig_nt_tsv)
+    join_csv(contigs_meta, contig_nt_flagged, SEQID, contig_nt_almost)
+
+  if contams:
+    contam_ctg_bam = p("control_to_contig.bam")
+    if need(contam_ctg_bam):
+      contam_ctg_sam = p("control_to_contig.sam")
+      cr1, cr2 = (p("control_merged_R1.fq"), p("control_merged_R2.fq"))
+      cr1, cr2 = merge_fastqs(contams, cr1, cr2)
+        # actually need to merge contams too
+      #TODO: remove the line below building the contigs_index again
+      sh.bowtie2_build(contigs, contigs_index)
+      sh.bowtie2(**{'1' : cr1, '2' : cr2, 'x' : contigs_index,
+                    '_err' : log, '_out' : contam_ctg_sam})
+      sh.samtools.sort(contam_ctg_sam, o=contam_ctg_bam)
+      sh.samtools.index(contam_ctg_bam)
+    contam_mapped_tsv = p("contam_mapped.tsv")
+    bam_to_mapped_tsv(contam_ctg_bam, 'control_mapped', contam_mapped_tsv)
+    join_csv(contig_nt_almost, contam_mapped_tsv, SEQID, contig_nt_tsv)
+  else:
+    shutil.copy(contigs_nt_almost, contig_nt_tsv)
 
   logtime('finished!')
 #  def mksummary(db, blast, s):
