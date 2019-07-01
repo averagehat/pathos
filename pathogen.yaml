@@ -14,6 +14,7 @@ threads: 16
 assembly:
   assembler: ray2
   options: " "
+  minimum_contig_length: 200
 cdhitdup:
   minDifference: 5
 ncbi:
