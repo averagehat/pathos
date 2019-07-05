@@ -1,23 +1,24 @@
-rapsearch:
-    rapsearchDB: /media/People/michael.panciera/path-pipe/rapsearch-nr-db
 pricefilter:
-  highQualPercent: 80
-  calledPercent: 95
-  highQualMin: 0.01
+  highQualPercent: 85
+  calledPercent: 90
+  highQualMin: 0.98
 bowtie2:
-  bowtieDB: /media/People/michael.panciera/path-pipe/bowtie-index
-gsnap:
-  gsnapDB: /fakepath/
+  bowtieDB: {DB}/human-bowtie/bowtie-index
 star:
-  starDB: /media/People/michael.panciera/path-pipe/star-index-dir/
+  starDB: {DB}/star-index-dir/
+  skip: {NO_STAR}
 threads: 16
 assembly:
-  assembler: abyss
-  options:
+  assembler: ray2
+  options: " "
+  minimum_contig_length: 200
 cdhitdup:
-  minDifference: 15
+  minDifference: 5
 ncbi:
-  ntDB: /media/VD_Research/databases/ncbi/blast/nt/nt
-  nrDB: /media/VD_Research/databases/ncbi/blast/nr/nr
+  ntDB: {DB}/ncbi/blast/nt/nt
+  nrDB: {DB}/ncbi/blast/nr/nr
+  ktTaxonomy: {DB}/krona
 lzwfilter:
-  maxCompressionScore: 0.55
+  minCompressionScore: 0
+blastn:
+  max_target_seqs: 3
