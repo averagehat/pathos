@@ -554,12 +554,17 @@ def run(cfg, input1, input2, contams, log=None):
   need = lambda p: not os.path.exists(p)
 
   logtime('star')
-  if need(_star1):
-    star(log, cfg, input1, input2)
-
-  if need(star1):
-    shutil.copy(_star1, star1)
-    shutil.copy(_star2, star2)
+  if not cfg.star.skip:
+    if need(_star1):
+      star(log, cfg, input1, input2)
+  
+    if need(star1):
+      shutil.copy(_star1, star1)
+      shutil.copy(_star2, star2)
+  else:  # building the STAR database requires a lot of memory. so does running it!
+    if need(star1):
+      shutil.copy(input1, star1)
+      shutil.copy(input2, star2)
 
   logtime('priceseqfilter')
   if need(psf1):

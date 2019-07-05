@@ -10,6 +10,7 @@ gsnap:
   gsnapDB: /fakepath/
 star:
   starDB: /media/People/michael.panciera/CURRENT/pathos/install/star-index-dir/
+  skip: false
 threads: 16
 assembly:
   assembler: ray2
@@ -18,8 +19,8 @@ assembly:
 cdhitdup:
   minDifference: 5
 ncbi:
-  ntDB: /media/VD_Research/databases/ncbi/blast/nt/nt
-  nrDB: /media/VD_Research/databases/ncbi/blast/nr/nr
+  ntDB: /opt/VDBSoftware/databases/ncbi/blast/nt/nt
+  nrDB: /opt/VDBSoftware/databases/ncbi/blast/nr/nr
   ktTaxonomy: /u/michael.panciera/myconda/opt/krona/taxonomy
   ignore: /media/VD_Research/Admin/PBS/Software/krona/
 lzwfilter:

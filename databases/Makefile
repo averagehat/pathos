@@ -9,7 +9,9 @@ KRONA=krona
 # accession2taxid/ -- gz files in there
 # taxdump.tar.gz  
 
-.PHONY: all human krona
+.PHONY: all human krona smallmem
+
+smallmem:  krona $(HUM_BOWTIE).1.bt21
 
 all: human krona
 

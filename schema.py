@@ -1,7 +1,7 @@
 schema_string = """type: object
 
 required:
-    - rapsearch
+    - star
     - pricefilter
     - bowtie2
     - ncbi
@@ -11,12 +11,14 @@ required:
     - lzwfilter
     - blastn
 properties:
-  rapsearch:
+  star:
     type: object
     properties:
-      rapsearchDB:
+      starDB:
         type: string
         pattern: ^(/[^/]+)+$
+      skip:
+        type: boolean
   pricefilter:
     type: object
     properties:
