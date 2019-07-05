@@ -8,13 +8,12 @@
 set -e
 
 if [ $# -ne 1 ]; then
-  echo 1>&2 "Usage: $0 <INSTALL_DIRECTORY>"
+  echo 1>&2 "Usage: $0 <INSTALL_BIN_DIRECTORY>"
   exit 3
 fi
 
 # CONDA install
-MINICONDA=$1/miniconda
-BIN=$MINICONDA/bin/
+BIN=$1
 export PATH=$BIN:$PATH
 
 
