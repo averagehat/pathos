@@ -1,5 +1,3 @@
-rapsearch:
-    rapsearchDB: /media/People/michael.panciera/path-pipe/rapsearch-nr-db
 pricefilter:
   highQualPercent: 85
   calledPercent: 90
@@ -22,7 +20,6 @@ ncbi:
   ntDB: /opt/VDBSoftware/databases/ncbi/blast/nt/nt
   nrDB: /opt/VDBSoftware/databases/ncbi/blast/nr/nr
   ktTaxonomy: /u/michael.panciera/myconda/opt/krona/taxonomy
-  ignore: /media/VD_Research/Admin/PBS/Software/krona/
 lzwfilter:
   minCompressionScore: 0
 blastn:
