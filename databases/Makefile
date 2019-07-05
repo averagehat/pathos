@@ -1,12 +1,27 @@
 HUM_STAR=star-index-dir
 HUM_BOWTIE_DIR=human-bowtie
 HUM_BOWTIE=$(HUM_BOWTIE_DIR)/bowtie-index
+KRONA=krona
 
-.PHONY: all human
 
-all: human
+# other files krona makes, below with $KRONA prefix
+# KTAX=division.dmp  gencode.dmp  nodes.dmp       citations.dmp     merged.dmp   readme.txt      taxonomy.tab delnodes.dmp      gc.prt  names.dmp # KACC=all.accession2taxid.sorted
+# accession2taxid/ -- gz files in there
+# taxdump.tar.gz  
+
+.PHONY: all human krona
+
+all: human krona
 
 human:  $(HUM_STAR)/SAindex  $(HUM_BOWTIE).1.bt21
+
+krona: $(KRONA)/all.accession2taxid.sorted $(KRONA)/nodes.dmp
+
+$(KRONA)/all.accession2taxid.sorted:
+	ktUpdateTaxonomy.sh  --accessions --preserve $(KRONA)
+
+$(KRONA)/nodes.dmp: 
+	ktUpdateTaxonomy.sh  --preserve $(KRONA) 
 
 $(HUM_STAR)/SAindex: hg38.fa panTro4.fa
 	mkdir -p $(HUM_STAR)
