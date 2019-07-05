@@ -20,10 +20,10 @@ human:  $(HUM_STAR)/SAindex  $(HUM_BOWTIE).1.bt21
 krona: $(KRONA)/all.accession2taxid.sorted $(KRONA)/nodes.dmp
 
 $(KRONA)/all.accession2taxid.sorted:
-	ktUpdateTaxonomy.sh  --accessions --preserve $(KRONA)
+	ktUpdateTaxonomy.sh  --accessions $(KRONA)
 
 $(KRONA)/nodes.dmp: 
-	ktUpdateTaxonomy.sh  --preserve $(KRONA) 
+	ktUpdateTaxonomy.sh $(KRONA) 
 
 $(HUM_STAR)/SAindex: hg38.fa panTro4.fa
 	mkdir -p $(HUM_STAR)
