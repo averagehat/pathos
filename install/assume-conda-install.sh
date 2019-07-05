@@ -18,6 +18,7 @@ export PATH=$BIN:$PATH
 
 
 # conda requirements
+conda config --add channels bioconda
 conda install -y --file conda-requirements-python.txt 
 conda install -y --file conda-requirements-software.txt 
 
