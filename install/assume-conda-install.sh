@@ -35,3 +35,18 @@ cd PriceSource140408 && make && ln -s $PWD/PriceSeqFilter $BIN/PriceSeqFilter &&
 # === cd-hit-dup ONLY (not the other cd-hit tools) 
 git clone https://github.com/weizhongli/cdhit
 cd cdhit/cd-hit-auxtools/ && make && ln -s $PWD/cd-hit-dup  $BIN/cd-hit-dup
+
+
+# == ncbi BLAST 
+BLAST_VER1=2.2.30
+BLAST_VER=ncbi-blast-${BLAST_VER1}+ 
+BLAST_TGZ=$BLAST_VER-x64-linux.tar.gz
+BLAST_URL=http://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$BLAST_VER1/$BLAST_TGZ
+wget $BLAST_URL -O- | tar xzvf -
+ln -s $PWD/$BLAST_VER/bin/blastdbcmd $BIN/blastdbcmd
+ln -s $PWD/$BLAST_VER/bin/blastn $BIN/blastn
+ln -s $PWD/$BLAST_VER/bin/blastx $BIN/blastx
+ln -s $PWD/$BLAST_VER/bin/blastp $BIN/blastp
+ln -s $PWD/$BLAST_VER/bin/update_blastdb.pl $BIN/update_blastdb.pl
+ln -s $PWD/$BLAST_VER/bin/makeblastdb $BIN/makeblastdb
+ln -s $PWD/$BLAST_VER/bin/blastdbcheck $BIN/blastdbcheck
