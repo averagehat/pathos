@@ -746,7 +746,13 @@ def run2(cfg, log, base_out, fastqs_and_controls):
           with open(x2, 'rb') as i2:
             shutil.copyfileobj(i2, o2)
   else:
-    r1, r2 = fastqs[0], fastqs[1]
+    f1 = os.path.abspath(fastqs[0])
+    f2 = os.path.abspath(fastqs[1])
+    r1 = p("input_merged.r1.fq")
+    r2 = p("input_merged.r2.fq")
+    os.symlink(f1, r1)
+    os.symlink(f2, r2) 
+    # r1, r2 = fastqs[0], fastqs[1]
   run(cfg2, r1, r2, controls, log)
 
 
