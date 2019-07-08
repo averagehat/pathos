@@ -356,7 +356,7 @@ blast_columns = "qseqid sseqid pident length mismatch gapopen qstart qend sstart
 csv_fields = blast_columns + ranks
 # csv_fields = ['superkingdom','kingdom','superfamily','genus','qend','bitscore','family','evalue','gapopen','pid','send','order','class','phylum','alnlen','species','sseqid','qseqid','qstart','sstart']
 csv_fields = blast_columns + ranks
-def blast2summary_dict(db, blastpath): # (Path, Path) -> list[dict]
+def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
 
   """Reading in a blast output file, lookup all seqids to get taxids with a single blastdbcmd.
   Then, lookup the taxonomy using ETE2 via the taxid, and add that info to the blast info."""
@@ -379,7 +379,7 @@ def blast2summary_dict(db, blastpath): # (Path, Path) -> list[dict]
   # matches = . . .
   # items = . . .
   #matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
-  ncbi = NCBITaxa() # downloads database and creates SQLite database if needed
+  ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
  # items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
   matches = [assoc(row, 'taxid', taxids[gi]) for gi, row in zip(gis, rows) if gi in taxids]
   items = [merge(row1, taxonomy(ncbi, row1['taxid'])) for row1 in matches]
@@ -387,8 +387,8 @@ def blast2summary_dict(db, blastpath): # (Path, Path) -> list[dict]
   return res
   #return {k:v for k, v in items if k in fields}
 
-def blast2summary(db, blastpath, outpath): # (Path,Path,Path) -> None
-    with_taxonomies = list(blast2summary_dict(db, blastpath))
+def blast2summary(db, blastpath, outpath, cfg): # (Path,Path,Path) -> None
+    with_taxonomies = list(blast2summary_dict(db, blastpath, ete2_db))
     with open(outpath, 'w') as out:
        #writer = csv.DictWriter(out, head.keys(), delimiter='\t')
        writer = csv.DictWriter(out, csv_fields, delimiter='\t')
@@ -653,7 +653,7 @@ def run(cfg, input1, input2, contams, log=None):
 
   logtime('blast2summary')
   if need(with_tax_tsv):
-    blast2summary(cfg.ncbi.ntDB, contig_nt, with_tax_tsv) # this is shared by read files
+    blast2summary(cfg.ncbi.ntDB, contig_nt, with_tax_tsv, cfg) # this is shared by read files
     # the below is for contigs only.
 
   if need(contigs_meta):

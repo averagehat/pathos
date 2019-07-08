@@ -11,6 +11,7 @@ required:
     - lzwfilter
     - blastn
     - param_file
+    - ete2_db
 properties:
   star:
     type: object
@@ -111,6 +112,9 @@ properties:
         minimum: 1
         maximum: 100
   param_file:
+    type: string
+    pattern: ^(/[^/]+)+$
+  ete2_db:
     type: string
     pattern: ^(/[^/]+)+$"""
 import yaml
