@@ -10,13 +10,14 @@ required:
     - cdhitdup
     - lzwfilter
     - blastn
+    - param_file
 properties:
   star:
     type: object
     properties:
       starDB:
         type: string
-        pattern: ^(/[^/]+)+$
+        pattern: ^(/[^/]+)+/?$
       skip:
         type: boolean
   pricefilter:
@@ -44,7 +45,7 @@ properties:
     properties:
       bowtieDB:
         type: string
-        pattern: ^(/[^/]+)+$
+        pattern: ^(/[^/]+)+/?$
     additionalProperties: false
     required:
       - bowtieDB
@@ -98,7 +99,7 @@ properties:
         pattern: ^(/[^/]+)+$
       ktTaxonomy:
         type: string
-        pattern: ^(/[^/]+)+$
+        pattern: ^(/[^/]+)+/?$
     required:
       - ntDB
       - ktTaxonomy
@@ -108,6 +109,9 @@ properties:
       max_target_seqs:
         type: number
         minimum: 1
-        maximum: 100"""
+        maximum: 100
+  param_file:
+    type: string
+    pattern: ^(/[^/]+)+$"""
 import yaml
 schema = yaml.load(schema_string)

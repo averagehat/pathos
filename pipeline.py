@@ -424,6 +424,7 @@ def bam2fq(sam, outpath, pairflag):
     # a type error because line will be a list of [stdout, stderr] in the case
     # of error
     for line in proc.popen().iter_lines(retcode=None):
+      print line
       if isinstance(line, list):
         line = line[0]
         if not line: continue
@@ -614,7 +615,7 @@ def run(cfg, input1, input2, contams, log=None):
   if need(contigs):
     if cfg.assembly.assembler == 'ray2':
       import subprocess
-      subprocess.check_call(' '.join(['ray_script', str(marked1), str(marked2), str(unfiltered_contigs), str(contigs_sam)]), shell=True)
+      subprocess.check_call(' '.join(['ray_script', str(marked1), str(marked2), str(unfiltered_contigs), str(contigs_sam), cfg.param_file]), shell=True)
       #sh.ray_script(marked1, marked2, contigs, contigs_sam)
     elif cfg.assembly.assembler == 'abyss':
       abyss(log, cfg, marked1, marked2, unfiltered_contigs)

@@ -4,7 +4,7 @@ R1=$1
 R2=$2
 FASTA=$3
 SAMFILE=$4
-PARAM=/media/VD_Research/Admin/PBS/Software/pathos/param.txt
+PARAM=$5
 
 PATHOSDIR=$(dirname $FASTA)
 OUTDIR=$(dirname $FASTA)/RAYOUT
