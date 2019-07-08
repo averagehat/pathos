@@ -12,6 +12,7 @@ from functools import partial
 from Bio import SeqIO
 from matplotlib import pyplot as plt
 import sys
+import numpy as np
 
 LCD_RANK_FIELD_NAME = 'Lowest Common Rank'
 
@@ -137,7 +138,7 @@ def make_rank_summaries(df, rankdir):
   for rank in ranks:
     gb = df.groupby(rank)
     aggregated = gb.agg({'qseqid' : lambda x: ','.join(set(x)), # 'qlen' : sum,
-                      'staxids' : lambda x: ','.join(x.unique()),
+                      'staxids' : lambda x: ','.join(np.vectorize(str)(x.unique())),
                        'read_count' : sum })
     # the value is a function on the series of just that thing.
     N50s = gb.qlen.apply(n50)
@@ -160,6 +161,8 @@ in_fp = 'contigs.15383.nt.tsv'
 # def summarize(in_summary_fp, outdir):
 import filenames
 def summarize(indir, outdir):
+  if not os.path.exists(outdir):
+     os.mkdir(outdir)
   in_summary_fp = os.path.join(indir, filenames.contig_nt_tsv)
   in_df = pd.read_csv(open(in_summary_fp), sep='\t')
   rankdir = os.path.join(outdir, 'ranks/')
