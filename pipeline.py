@@ -424,7 +424,6 @@ def bam2fq(sam, outpath, pairflag):
     # a type error because line will be a list of [stdout, stderr] in the case
     # of error
     for line in proc.popen().iter_lines(retcode=None):
-      print line
       if isinstance(line, list):
         line = line[0]
         if not line: continue
