@@ -388,7 +388,7 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
   #return {k:v for k, v in items if k in fields}
 
 def blast2summary(db, blastpath, outpath, cfg): # (Path,Path,Path) -> None
-    with_taxonomies = list(blast2summary_dict(db, blastpath, ete2_db))
+    with_taxonomies = list(blast2summary_dict(db, blastpath, cfg.ete2_db))
     with open(outpath, 'w') as out:
        #writer = csv.DictWriter(out, head.keys(), delimiter='\t')
        writer = csv.DictWriter(out, csv_fields, delimiter='\t')
