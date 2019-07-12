@@ -551,7 +551,6 @@ def run(cfg, input1, input2, contams, log=None):
       time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
       message = "{}  {} started\n\n".format(time, s)
       log.write(message)
-  need = lambda p: not os.path.exists(p)
 
   logtime('star')
   if not cfg.star.skip:
@@ -717,6 +716,8 @@ def run(cfg, input1, input2, contams, log=None):
 #    krona(log, cfg, nr1, kronaNR1)
 #    krona(log, cfg, nr2, kronaNR2)
 
+need = lambda p: not os.path.exists(p)
+
 def run2(cfg, log, base_out, fastqs_and_controls):
   '''If there is more than one pair of input files, merge them into a single pair (two files). r1 will have all the R1 files, r2 will have all the R2 files, in the order that they were passed to the commandline.
   NOTE: this requires that they were passed in the correct way!
@@ -733,26 +734,25 @@ def run2(cfg, log, base_out, fastqs_and_controls):
   cfg2.outdir = outdir
   p = partial(os.path.join, outdir)
   if not os.path.exists(outdir): os.makedirs(outdir)
-  if len(fastqs) > 2:
-    r1 = p("input_merged.r1.fq")
-    r2 = p("input_merged.r2.fq")
-    #if not os.path.exists(cfg.outdir): os.mkdir(cfg.outdir)
-    x1s, x2s = fastqs[0::2], fastqs[1::2]
-    with open(r1, 'wb') as o1:
-      with open(r2, 'wb') as o2:
-        for x1, x2 in zip(x1s, x2s):
-          with open(x1, 'rb') as i1:
-            shutil.copyfileobj(i1, o1) #, 1024*1024*10)
-          with open(x2, 'rb') as i2:
-            shutil.copyfileobj(i2, o2)
-  else:
-    f1 = os.path.abspath(fastqs[0])
-    f2 = os.path.abspath(fastqs[1])
-    r1 = p("input_merged.r1.fq")
-    r2 = p("input_merged.r2.fq")
-    os.symlink(f1, r1)
-    os.symlink(f2, r2) 
-    # r1, r2 = fastqs[0], fastqs[1]
+  r1 = p("input_merged.r1.fq")
+  r2 = p("input_merged.r2.fq")
+  if need(r1) or need(r2):
+    if len(fastqs) > 2:
+      #if not os.path.exists(cfg.outdir): os.mkdir(cfg.outdir)
+      x1s, x2s = fastqs[0::2], fastqs[1::2]
+      with open(r1, 'wb') as o1:
+        with open(r2, 'wb') as o2:
+          for x1, x2 in zip(x1s, x2s):
+            with open(x1, 'rb') as i1:
+              shutil.copyfileobj(i1, o1) #, 1024*1024*10)
+            with open(x2, 'rb') as i2:
+              shutil.copyfileobj(i2, o2)
+    else:
+      f1 = os.path.abspath(fastqs[0])
+      f2 = os.path.abspath(fastqs[1])
+      os.symlink(f1, r1)
+      os.symlink(f2, r2) 
+      # r1, r2 = fastqs[0], fastqs[1]
   run(cfg2, r1, r2, controls, log)
 
 
