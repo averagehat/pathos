@@ -135,8 +135,15 @@ def abyss(log, cfg, r1, r2, out):
     f1 = dir.relpathto(r1)
     f2 = dir.relpathto(r2)
     prefix=out.basename().split('-')[0]
-    print f1, f2, 'name=%s' % prefix, 'k=%s' % 25
-    sh.run_abyss(f1, f2, 'name=%s' % prefix, 'k=%s' % 25, C=dir, _err=log, _out=log)
+    #print f1, f2, 'name=%s' % prefix, 'k=%s' % 25
+    #cmd("in='%s %s'" % (f1, f2),'name=%s' % prefix, 'k=%s' % 25, C=dir, _err=log, _out=log)
+    # cmd.wait()
+    abyss_log = os.path.join(dir, "abyss.log")
+    cmd_template = r"abyss-pe in='{f1} {f2}' name={prefix} k={kmer} -C {dir} > {abyss_log} 2>&1" 
+    cmd = cmd_template.format(f1=f1,f2=f2, prefix=prefix, kmer=25, dir=dir, abyss_log=abyss_log)
+    log.write('\nRunning:\n{command}\nwriting log to {abyss_log}'.format(command=cmd, abyss_log=abyss_log))
+    os.system(cmd)
+   
 
 SEQID='qseqid'
 #def lzw_filter(log, cfg, r1, r2, out1, out2):
