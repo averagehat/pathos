@@ -473,7 +473,11 @@ def filter_contigs(min_length, inc, outc):
   raw_seqs = SeqIO.parse(inc, 'fasta')
   filtered_seqs = ifilter(partial(seq_reaches_length, min_length), raw_seqs)
   with open(outc, 'w') as out:
-    SeqIO.write(filtered_seqs, out, 'fasta')
+    #SeqIO.write(filtered_seqs, out, 'fasta')
+    for seq in filtered_seqs:
+      if not seq.id.startswith('c'):
+        seq.id = 'c' + seq.id
+      SeqIO.write(seq, out, 'fasta')
 
 def merge_fastqs(fastqs, r1, r2):
   if len(fastqs) > 2:
@@ -641,6 +645,8 @@ def run(cfg, input1, input2, contams, log=None):
   logtime('blastn')
   if need(contig_nt):
     blastn(log, cfg, contigs, contig_nt)
+  logtime('dup_nt')
+  if need(dup_nt):
     counter, _ = sum_sam_by_ref(None, None, contigs_sam)
     dup_blast(log, counter, contig_nt, dup_nt)
 
