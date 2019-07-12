@@ -63,6 +63,8 @@ properties:
           - ray2
       options:
         type: string
+      kmer:
+        type: integer
       minimum_contig_length:
           type: integer
           minimum: 1
@@ -71,6 +73,7 @@ properties:
       - assembler
       - options
       - minimum_contig_length
+      - kmer
     additionalProperties: false
   cdhitdup:
     type: object

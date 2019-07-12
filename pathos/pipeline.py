@@ -139,8 +139,9 @@ def abyss(log, cfg, r1, r2, out):
     #cmd("in='%s %s'" % (f1, f2),'name=%s' % prefix, 'k=%s' % 25, C=dir, _err=log, _out=log)
     # cmd.wait()
     abyss_log = os.path.join(dir, "abyss.log")
+    kmer = cfg.assembly.kmer
     cmd_template = r"abyss-pe in='{f1} {f2}' name={prefix} k={kmer} -C {dir} > {abyss_log} 2>&1" 
-    cmd = cmd_template.format(f1=f1,f2=f2, prefix=prefix, kmer=25, dir=dir, abyss_log=abyss_log)
+    cmd = cmd_template.format(f1=f1,f2=f2, prefix=prefix, kmer=kmer, dir=dir, abyss_log=abyss_log)
     log.write('\nRunning:\n{command}\nwriting log to {abyss_log}'.format(command=cmd, abyss_log=abyss_log))
     os.system(cmd)
    
