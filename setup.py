@@ -15,6 +15,7 @@ setup(
         'console_scripts': [
             'pathos_single = pathos.pipeline:main',
             'pathos_sheet =  pathos.pathos_sheet:main' 
+            'pathos_summary =  pathos.summary:main' 
           ]
         } )
     
