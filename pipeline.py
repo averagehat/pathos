@@ -683,7 +683,7 @@ def run(cfg, input1, input2, contams, log=None):
     bam_to_mapped_tsv(contam_ctg_bam, 'control_mapped', contam_mapped_tsv)
     join_csv(contig_nt_almost, contam_mapped_tsv, SEQID, contig_nt_tsv)
   else:
-    shutil.copy(contigs_nt_almost, contig_nt_tsv)
+    shutil.copy(contig_nt_almost, contig_nt_tsv)
 
   logtime('finished!')
 #  def mksummary(db, blast, s):
