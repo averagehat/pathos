@@ -23,7 +23,7 @@ import sys
 from functools import partial
 import multiprocessing
 
-from typing import Dict,List,Tuple,Iterator
+from typing import Dict,List,Tuple,Iterator,Any
 from collections import OrderedDict # a type for csv.DicterReader
 # if there is more than one pair of read files need to handle that. I guess by concatenating.
 # need to fix so that we join on conting ID. currently joining on something else.
@@ -33,7 +33,7 @@ from collections import OrderedDict # a type for csv.DicterReader
 SEP=';'
 
 
-def weave_files(sampledir: Path, row: OrderedDict[str, str]) -> Tuple[List[str], List[str]]:
+def weave_files(sampledir: str, row: OrderedDict[str, str]) -> Tuple[List[str], List[str]]:
   control_dirs = row['control_dirs'].split(SEP)
   sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
@@ -55,14 +55,13 @@ def reads_from_dirs(dirs: List[str]) -> Tuple[List[str], List[str]]:
 
 # run the main program
 
-
 def main() -> None:
-  args = docopt(__doc__, version='Version 1.0')
+  args = docopt(__doc__, version='Version 1.0')  #TODO: use TypedDict, maybe
 
-  # copy-pasted from pipeline.py :(
+# copy-pasted from pipeline.py :( 
   cfg_f = args['--config']
-  cfg_y = yaml.load(open(cfg_f))
-  cfg = pipeline.Config(cfg_y)  # type: ignore   #TODO: fix pipeline imports
+  cfg_y = yaml.load(open(cfg_f))  # type: Dict[str, Any] # in this case it's a dict, it's like json.loads
+  cfg = pipeline.Config(cfg_y)  # type: ignore  #TODO: dynamically defined in pipeline.py
   # it's probably better to have separate log files.
   if args['--log']:
     _log = Path(args['--log'])
@@ -123,6 +122,8 @@ def main() -> None:
 #    for i, row in enumerate(rows):
 #      cfg.outdir = os.path.join(base_out, "sheet-sample-%d" % i)
 #      pipeline.run2(cfg, log, base_out, (fastqs, controls))
+  
+
 
 
    # if controls:
@@ -131,7 +132,6 @@ def main() -> None:
       #sh.python('pipeline.py', ' '.join(fastqs), '--control', ' '.join(controls), config=cfg_f, outdir=cfg.outdir)
    #   sh.python('pipeline.py', ' '.join(fastqs), '--config', cfg_f,  '--outdir', cfg.outdir, '--control', ' '.join(controls))
     #print 'python pipeline.py', ' '.join(fastqs), '--config', args['--config'], '-o', cfg.outdir, '--control', ' '.join(controls)
-
 
 
 if __name__ == '__main__':

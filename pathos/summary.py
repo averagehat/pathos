@@ -9,8 +9,8 @@ from operator import add
 import os
 from io import StringIO
 from functools import partial
-from Bio import SeqIO
-from matplotlib import pyplot as plt
+from Bio import SeqIO # type: ignore
+from matplotlib import pyplot as plt # type: ignore
 import sys
 import numpy as np
 
@@ -41,7 +41,6 @@ def summ_contigs(tops):
                        'contig_count' : len(tops),
                        'assembly_length' :  tops.qlen.sum(),
                        'species_count' : tops.species.unique().size })
-
 
 def count(gen):
   return sum(1 for _ in gen)
@@ -159,6 +158,8 @@ def make_rank_summaries(df, rankdir):
 in_fp = 'contigs.15383.nt.tsv'
 # def summarize(in_summary_fp, outdir):
 from . import filenames
+
+
 def summarize(indir, outdir):
   if not os.path.exists(outdir):
      os.mkdir(outdir)
@@ -179,7 +180,7 @@ def summarize(indir, outdir):
   #TODO: below writes the empty index in the csv. nah, fixed with index=False
   summ_df.to_csv(summ_fp, sep='\t', index=False)
 
-def main():
+def main() -> None:
   args = docopt(__doc__, version='Version 1.0')
   indir = args['<indir>']
   outdir = args['<outdir>']

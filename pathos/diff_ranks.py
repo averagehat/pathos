@@ -5,6 +5,7 @@ import csv
 from io import StringIO
 from path import Path
 
+
 # need to fix so that we join on conting ID. currently joining on something else.
 test_string = '''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
 15368	2.0	0.0	Bacteria			Bacillus	1.0	5e-08	Bacillaceae	4605131.0	3.0	93.18	4605174.0	Bacillales	Bacilli	Firmicutes	44.0	Bacillus cereus	gi|300373910|gb|CP001746.1|	0.0	44.0
