@@ -3,6 +3,7 @@ from collections import Counter
 #import pandas as pd
 import csv
 from io import StringIO
+from path import Path
 
 # need to fix so that we join on conting ID. currently joining on something else.
 test_string = '''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
@@ -14,7 +15,7 @@ test_string = '''qseqid	read_count	contam_percentage	superkingdom	kingdom	superf
 1476			Viruses			Flavivirus	1.0	7e-12	Flaviviridae	212.0	2.0	95.83	165.0				48.0	Kokobera virus	gi|1098496923|gb|KU059115.1|	0.0	48.0
 '''
 
-def test_differing_rank():
+def test_differing_rank() -> str:
   test_csv = StringIO(test_string)
   #rows = pd.read_csv(test_csv, sep='\t')
   rows = list(csv.DictReader(test_csv, delimiter='\t'))
@@ -24,7 +25,7 @@ def test_differing_rank():
   species_rows = rows[:3]
   assert differing_rank(species_rows) == 'species'
 
-  kingdom_rows = rows[0], rows[1], rows[2], rows[4]
+  kingdom_rows = [rows[0], rows[1], rows[2], rows[4]]
   # some columns are empty: in this case kingdom. so with that unknown, we go down to phylum.
   assert differing_rank(kingdom_rows) == 'phylum', differing_rank(kingdom_rows) # map(get('kingdom'), kingdom_rows)
 
@@ -36,7 +37,7 @@ def test_differing_rank():
 '''
 Find the smallest rank where the blast results DO NOT match.
 '''
-def differing_rank(rows):
+def differing_rank(rows: List[OrderedDict[str, Any]]) -> str:
   # no domain
   ranks = reversed(['superkingdom',	'kingdom',	 'phylum',\
    'class', 'order', 'superfamily', 'family',	'genus', 'species'])
@@ -75,16 +76,21 @@ def differing_rank(rows):
 from toolz.dicttoolz import merge
 import itertools
 from itertools import groupby
-def flag(group_obj):
+from typing import Iterator,Tuple,_T,List,Any,Dict
+from collections import OrderedDict # dictreader returns ordereddict in py 3.6+
+
+#GroupByObj = Iterator[Tuple[_T, Iterator[_T]]]
+
+def flag(group_obj: Tuple[str, Iterator[OrderedDict[str, Any]]]) -> List[Dict[Any, Any]]:
   group = list(group_obj[1])
-  rank = differing_rank(group)
+  rank = differing_rank(group) # type: str
   add_rank = lambda x: merge(x, {'different_rank' : rank})
   return list(map(add_rank, group))
 
-def flag_annotated_blast(input_fn, output_fn):
+def flag_annotated_blast(input_fn: Path, output_fn: Path) -> None:
   with open(input_fn) as f_in, open(output_fn, 'w') as f_out:
     rows = list(csv.DictReader(f_in, delimiter='\t'))
-    groups = groupby(rows, lambda x: x['qseqid'])
+    groups = groupby(rows, lambda x: x['qseqid']) # Iterator[Tuple[str, Iterator[Any]]]
     flagged_rows = list(itertools.chain(*list(map(flag, groups))))
     writer = csv.DictWriter(f_out, list(flagged_rows[0].keys()), delimiter='\t')
     writer.writeheader()
