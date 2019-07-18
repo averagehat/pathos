@@ -75,7 +75,6 @@ def summarize_nontaxon(files, indir):
   return summ_df
   # return None
 
-# type: rank
 descendingRanksWithNoMatch = ['NoMatch', 'superkingdom', 'kingdom', 'phylum','class', 'order', \
                    'superfamily', 'family',   'genus', 'species']
 descendingRanks = descendingRanksWithNoMatch[1:]
