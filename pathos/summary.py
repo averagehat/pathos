@@ -7,7 +7,7 @@ import pandas as pd
 from operator import add
 # from itertools import accumulate # python 3 :(
 import os
-from StringIO import StringIO
+from io import StringIO
 from functools import partial
 from Bio import SeqIO
 from matplotlib import pyplot as plt
@@ -159,7 +159,7 @@ def make_rank_summaries(df, rankdir):
 
 in_fp = 'contigs.15383.nt.tsv'
 # def summarize(in_summary_fp, outdir):
-import filenames
+from . import filenames
 def summarize(indir, outdir):
   if not os.path.exists(outdir):
      os.mkdir(outdir)

@@ -5,7 +5,7 @@ import csv
 from io import StringIO
 
 # need to fix so that we join on conting ID. currently joining on something else.
-test_string = u'''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
+test_string = '''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
 15368	2.0	0.0	Bacteria			Bacillus	1.0	5e-08	Bacillaceae	4605131.0	3.0	93.18	4605174.0	Bacillales	Bacilli	Firmicutes	44.0	Bacillus cereus	gi|300373910|gb|CP001746.1|	0.0	44.0
 15368	2.0	0.0	Bacteria			Bacillus	1.0	5e-08	Bacillaceae	4605131.0	3.0	93.18	4605174.0	Bacillales	Bacilli	Firmicutes	44.0	Bacillus cereus	gi|300373910|gb|CP001746.1|	0.0	44.0
 4142	2.0	0.0	Bacteria			Bacillus	3.0	1e-14	Bacillaceae	3013062.0	0.0	100.0	3013016.0	Bacillales	Bacilli	Firmicutes	47.0	Bacillus kochii	gi|1237941648|gb|CP022983.1|	0.0	49.0
@@ -42,7 +42,7 @@ def differing_rank(rows):
    'class', 'order', 'superfamily', 'family',	'genus', 'species'])
   differ_at = 'MATCH'
   for rank in ranks:
-    row_ranks = map(get(rank), rows)
+    row_ranks = list(map(get(rank), rows))
     uniq = set(row_ranks)
     if len(uniq) > 1:
       differ_at = rank
@@ -79,14 +79,14 @@ def flag(group_obj):
   group = list(group_obj[1])
   rank = differing_rank(group)
   add_rank = lambda x: merge(x, {'different_rank' : rank})
-  return map(add_rank, group)
+  return list(map(add_rank, group))
 
 def flag_annotated_blast(input_fn, output_fn):
   with open(input_fn) as f_in, open(output_fn, 'w') as f_out:
     rows = list(csv.DictReader(f_in, delimiter='\t'))
     groups = groupby(rows, lambda x: x['qseqid'])
-    flagged_rows = list(itertools.chain(*map(flag, groups)))
-    writer = csv.DictWriter(f_out, flagged_rows[0].keys(), delimiter='\t')
+    flagged_rows = list(itertools.chain(*list(map(flag, groups))))
+    writer = csv.DictWriter(f_out, list(flagged_rows[0].keys()), delimiter='\t')
     writer.writeheader()
     for row in flagged_rows:
       writer.writerow(row)
@@ -94,4 +94,4 @@ def flag_annotated_blast(input_fn, output_fn):
 
 
 if __name__ == '__main__':
-  print test_differing_rank()
+  print(test_differing_rank())

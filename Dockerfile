@@ -3,13 +3,14 @@ MAINTAINER Michael Panciera
 
 ARG GIT_USER
 ARG GIT_TOKEN
+ENV PYTHON_VERSION 3.7
 
 RUN yum -y update \
     && yum -y install curl bzip2 git wget make gcc-c++ \
-    && curl -sSL https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \
+    && curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh \ 
     && bash /tmp/miniconda.sh -bfp /usr/local/ \
     && rm -rf /tmp/miniconda.sh \
-    && conda install -y python=2 \
+    && conda install -y python=$PYTHON_VERSION \
     && conda update conda \
     && conda clean --all --yes \
     && rpm -e --nodeps curl bzip2 \

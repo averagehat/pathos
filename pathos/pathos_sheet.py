@@ -15,7 +15,7 @@ from glob import glob
 from docopt import docopt
 import csv
 import os
-import pipeline
+from . import pipeline
 from path import Path
 import yaml
 import itertools
@@ -35,19 +35,19 @@ def weave_files(sampledir, row):
   sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
   # control_dirs could be empty
-  c1s, c2s = reads_from_dirs(map(sdir, control_dirs)) if control_dirs else ([], [])
-  controls = list(itertools.chain(*zip(c1s, c2s)))
+  c1s, c2s = reads_from_dirs(list(map(sdir, control_dirs))) if control_dirs else ([], [])
+  controls = list(itertools.chain(*list(zip(c1s, c2s))))
   # order of contams doesn't matter but we'll zip them anyway
-  r1s, r2s = reads_from_dirs(map(sdir, read_dirs))
+  r1s, r2s = reads_from_dirs(list(map(sdir, read_dirs)))
   # weave them into a sigle list of R1, R2^1, R1^2, R2^2 ....
-  fastqs = list(itertools.chain(*zip(r1s, r2s)))
+  fastqs = list(itertools.chain(*list(zip(r1s, r2s))))
   return fastqs, controls
 
 def reads_from_dirs(dirs):
   """Extract all R1/R2 files from a directory, ignores index (I1/I2) files"""
   # return list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R[12]_*')), dirs)))
-  r1s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R1_*')), dirs)))
-  r2s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R2_*')), dirs)))
+  r1s = list(itertools.chain(*[glob(os.path.join(x, '*_R1_*')) for x in dirs]))
+  r2s = list(itertools.chain(*[glob(os.path.join(x, '*_R2_*')) for x in dirs]))
   return r1s, r2s
 
 # run the main program
@@ -64,7 +64,7 @@ def main():
   if args['--log']:
     _log = Path(args['--log'])
     if _log.exists():
-      print "Removing old log file %s" % _log
+      print("Removing old log file %s" % _log)
       _log.remove()
     log = open(args['--log'], 'a')
   else:
@@ -80,7 +80,7 @@ def main():
       fqs_and_controls = list(map(weave, rows))
       run2_func = partial(pipeline.run2, cfg, log, base_out)
       pool = multiprocessing.Pool(len(rows))
-      print "Launching %d processes.\n==========================\n\n" % len(rows)
+      print("Launching %d processes.\n==========================\n\n" % len(rows))
       pool.map(run2_func, fqs_and_controls)
       pool.close()
       pool.join()
@@ -111,9 +111,9 @@ def main():
               # '-l', "nodes=1:ppn=8:mem=80514472881")
               '-l', "nodes=1:ppn=12",
               '-l', "mem=80514472881")
-      print "Running %s" % script
+      print("Running %s" % script)
   else:
-    print "No --qsub flag, didn't run anything."
+    print("No --qsub flag, didn't run anything.")
 #  if p:
 #
 #  else:
