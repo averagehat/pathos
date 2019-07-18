@@ -26,7 +26,7 @@ from Bio import SeqIO
 from operator import itemgetter as get
 from collections import Counter
 import csv
-from ete2 import NCBITaxa
+from ete3 import NCBITaxa
 import plumbum
 import pandas as pd
 from .schema import schema
