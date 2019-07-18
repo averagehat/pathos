@@ -22,6 +22,9 @@ import itertools
 import sys
 from functools import partial
 import multiprocessing
+
+from typing import Dict,List,Tuple,Iterator
+from collections import OrderedDict # a type for csv.DicterReader
 # if there is more than one pair of read files need to handle that. I guess by concatenating.
 # need to fix so that we join on conting ID. currently joining on something else.
 # also ppl might do something with index
@@ -30,7 +33,7 @@ import multiprocessing
 SEP=';'
 
 
-def weave_files(sampledir, row):
+def weave_files(sampledir: Path, row: OrderedDict[str, str]) -> Tuple[List[str], List[str]]:
   control_dirs = row['control_dirs'].split(SEP)
   sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
@@ -43,7 +46,7 @@ def weave_files(sampledir, row):
   fastqs = list(itertools.chain(*list(zip(r1s, r2s))))
   return fastqs, controls
 
-def reads_from_dirs(dirs):
+def reads_from_dirs(dirs: List[str]) -> Tuple[List[str], List[str]]:
   """Extract all R1/R2 files from a directory, ignores index (I1/I2) files"""
   # return list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R[12]_*')), dirs)))
   r1s = list(itertools.chain(*[glob(os.path.join(x, '*_R1_*')) for x in dirs]))
@@ -53,13 +56,13 @@ def reads_from_dirs(dirs):
 # run the main program
 
 
-def main():
+def main() -> None:
   args = docopt(__doc__, version='Version 1.0')
 
   # copy-pasted from pipeline.py :(
   cfg_f = args['--config']
   cfg_y = yaml.load(open(cfg_f))
-  cfg = pipeline.Config(cfg_y)
+  cfg = pipeline.Config(cfg_y)  # type: ignore   #TODO: fix pipeline imports
   # it's probably better to have separate log files.
   if args['--log']:
     _log = Path(args['--log'])
@@ -71,11 +74,11 @@ def main():
     log = sys.stdout
 
   sheet = open(args['<samplesheet>'])
-  rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
-  rows=list(rows)
+  _rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
+  rows=list(_rows)
   base_out = args['--outdir'] or "." # os.getcwd()?
   sampledir = args['--sampledir']
-  def p_run(rows):
+  def p_run(rows: List[Dict[str, str]]) -> None:
       weave = partial(weave_files, sampledir)
       fqs_and_controls = list(map(weave, rows))
       run2_func = partial(pipeline.run2, cfg, log, base_out)
@@ -105,7 +108,7 @@ def main():
       #print "qsub {script} -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
       #print " -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
       sample_num = row['read_dirs'].split(SEP)[0]
-      sh.qsub(script,
+      sh.qsub(script,                # type: ignore
               '-N',  "sheet-sample-%s" % sample_num,
               # "-M", "EMAIL HERE",
               # '-l', "nodes=1:ppn=8:mem=80514472881")
