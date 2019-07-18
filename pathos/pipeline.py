@@ -333,10 +333,10 @@ def blastdbcmd(**opts):
 
 def get_taxid(db, seqids): # (Path, str) -> dict[str,str]
    #res = sh.blastdbcmd(db=db, outfmt="'%g %T'", entry="'%s'" % seqid, _long_prefix='-')
-   max_ids = 1000/80
+   max_ids = 1000 // 80
    if len(seqids) > max_ids:
       xs = [seqids[i*max_ids:(i+1)*max_ids] \
-         for i in range(len(seqids) / max_ids)]
+         for i in range(len(seqids) // max_ids)]
       xs.extend([seqids[sum(map(len, xs))-1:]])
    else: xs = [seqids]
    res = mapcat(lambda x: blastdbcmd(db=db, outfmt="'%g %T'", entry="'%s'" % ','.join(x)), xs)
