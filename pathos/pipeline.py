@@ -655,9 +655,9 @@ def run(cfg, input1, input2, contams, log=None):
 #  if need(contig_nr):
 #    blastx(log, cfg, contigs, contig_nr)
 #    dup_blast(log, contigs_sam, contig_nr, dup_nr)
-
+  _run_type = os.environ.get('RUNTYPE', 'REAL')
   logtime('krona')
-  if need(contig_kronaNT):
+  if need(contig_kronaNT) and (_run_type != 'TEST'):
     krona(log, cfg, contig_nt, contig_kronaNT)
   if need(contig_kronaNT_dup):
     krona(log, cfg, dup_nt, contig_kronaNT_dup)
