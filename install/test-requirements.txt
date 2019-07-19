@@ -1,0 +1,2 @@
+nosetests
+git+git://github.com/python/mypy.git

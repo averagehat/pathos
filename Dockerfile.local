@@ -28,7 +28,8 @@ RUN    cd install \
     && sh assume-conda-install.sh /usr/local/bin/ \ 
     && cd .. \
     && sh mk_yaml.sh > test.yaml \
-    && sh test-setup.sh
+    && sh test-setup.sh \
+    && pip install -r ../install/test-requirements.txt 
 #    && cd databases \
 #    && make krona 
 

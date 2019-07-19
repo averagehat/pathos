@@ -6,9 +6,16 @@
 *.egg
 *.bak
 *.pyc
+*Log.out
+*.log
 
 .mypy_cache
 install/PriceSource*
 install/cdhit
 *.egg-info
 *__pycache__*
+
+
+databases/test/
+databases/human-bowtie
+databases/star-index-dir/

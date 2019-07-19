@@ -26,4 +26,5 @@ RUN mkdir /HERE && cd /HERE && git clone https://${GIT_USER}:${GIT_TOKEN}@github
     && cd .. \
     && sh mk_yaml.sh > test.yaml \
     && cd databases \
-    && sh test-setup.sh
+    && sh test-setup.sh \
+    && pip install -r ../install/test-requirements.txt 
