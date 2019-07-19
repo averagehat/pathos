@@ -387,7 +387,10 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
   # matches = . . .
   # items = . . .
   #matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
-  ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
+  if ete2_db:
+    ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
+  else: 
+    ncbi = NCBITaxa() # downloads database and creates SQLite database if needed
  # items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
   matches = [assoc(row, 'taxid', taxids[gi]) for gi, row in zip(gis, rows) if gi in taxids]
   items = [merge(row1, taxonomy(ncbi, row1['taxid'])) for row1 in matches]
