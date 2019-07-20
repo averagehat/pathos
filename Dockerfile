@@ -19,10 +19,10 @@ RUN yum -y update \
 ENV PATH "/usr/local/bin/:$PATH"
 
 ENV RUNTYPE "TEST"
-
-RUN mkdir /HERE && cd /HERE && git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/averagehat/pathos.git \
-    && cd pathos/install \
-    && sh assume-conda-install.sh /usr/local/bin/ \ 
+ADD . /app
+WORKDIR /app
+RUN    cd install \
+    && bash assume-conda-install.sh /usr/local/bin/ \ 
     && cd .. \
     && sh mk_yaml.sh > test.yaml \
     && cd databases \
