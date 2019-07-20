@@ -1,8 +1,6 @@
 FROM centos:centos7
 MAINTAINER Michael Panciera
 
-ARG GIT_USER
-ARG GIT_TOKEN
 ENV PYTHON_VERSION 3.7
 
 RUN yum -y update \
@@ -21,6 +19,7 @@ ENV PATH "/usr/local/bin/:$PATH"
 ENV RUNTYPE "TEST"
 ADD . /app
 WORKDIR /app
+
 RUN    cd install \
     && bash assume-conda-install.sh /usr/local/bin/ \ 
     && cd .. \
