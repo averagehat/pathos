@@ -1,8 +1,6 @@
 FROM centos:centos7
 MAINTAINER Michael Panciera
 
-ARG GIT_USER
-ARG GIT_TOKEN
 ENV PYTHON_VERSION 3.7
 
 RUN yum -y update \
@@ -19,9 +17,10 @@ RUN yum -y update \
 ENV PATH "/usr/local/bin/:$PATH"
 
 ENV RUNTYPE "TEST"
+ADD . /app
+WORKDIR /app
 
-RUN mkdir /HERE && cd /HERE && git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/averagehat/pathos.git \
-    && cd pathos/install \
+RUN    cd install \
     && sh assume-conda-install.sh /usr/local/bin/ \ 
     && cd .. \
     && sh mk_yaml.sh > test.yaml \
