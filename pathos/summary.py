@@ -1,6 +1,9 @@
 '''
 Usage:
     summary.py <indir> <outdir>
+    
+Run after `pathos_single` or `pathos_sheet` to get summary information on for that run.
+<indir> is the directory with `pathos` output. 
 '''
 from docopt import docopt
 import pandas as pd
