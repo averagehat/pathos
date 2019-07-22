@@ -6,6 +6,12 @@
 Welcome to pathos's documentation!
 ===========================================
 
+.. automodule:: pathos.diff_rank
+    :members:
+
+.. automodule:: pathos.summary
+    :members:
+
 Contents:
 
 .. toctree::
