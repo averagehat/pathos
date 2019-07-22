@@ -89,6 +89,11 @@ def flag(group_obj: Tuple[str, Iterator[OrderedDict[str, Any]]]) -> List[Dict[An
   return list(map(add_rank, group))
 
 def flag_annotated_blast(input_fn: Path, output_fn: Path) -> None:
+  '''
+  @param input_fn - input file
+  @param output_fn - output file
+  @returns Nothing
+  '''
   with open(input_fn) as f_in, open(output_fn, 'w') as f_out:
     rows = list(csv.DictReader(f_in, delimiter='\t'))
     groups = groupby(rows, lambda x: x['qseqid']) # Iterator[Tuple[str, Iterator[Any]]]
