@@ -1,0 +1,4 @@
+sphinx 
+sphinx_rtd_theme
+git+https://github.com/untitaker/sphinx-autodoc-typehints@feat/always-document-params-opt
+recommonmark

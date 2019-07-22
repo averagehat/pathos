@@ -8,6 +8,7 @@
 *.pyc
 *Log.out
 *.log
+*.DS_Store
 
 .mypy_cache
 install/PriceSource*
@@ -19,3 +20,4 @@ install/cdhit
 databases/test/
 databases/human-bowtie
 databases/star-index-dir/
+docs/_build
