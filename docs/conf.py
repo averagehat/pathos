@@ -51,7 +51,9 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'recommonmark'
+    'recommonmark',
+    'sphinx_autodoc_typehints'
+
 ]
 
 # Add any paths that contain templates here, relative to this directory.
