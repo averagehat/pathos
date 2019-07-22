@@ -1,7 +1,7 @@
 FROM centos:centos7
 MAINTAINER Michael Panciera
 
-ENV PYTHON_VERSION 3.7
+ENV PYTHON_VERSION 3.6
 
 RUN yum -y update \
     && yum -y install curl bzip2 git wget make gcc-c++ \
