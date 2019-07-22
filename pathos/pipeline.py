@@ -3,11 +3,18 @@ Usage:
     pipeline.py (--fastq <FASTQS>...) --config <config> [-o <outdir>] [--log <log>] [--control <CONTROLS>...]
 
 Options:
-    -f <FASTQS>, --fastq <FASTQS>
+    -f <FASTQS>, --fastq <FASTQS>       
     -r <CONTROLS>, --control <CONTROLS>
     -c <config>, --config <config>
     --o <outdir>, --outdir <outdir>
     --log <log>, -l <log>
+    
+Notes: 
+   For the --fastq argument, provide any number of paired read files ordered like: 
+   --fastq   <Samp0_R1> <Samp0_R2> <Samp1_R1> <Samp1_R2> . . . 
+   The --control argument should be provided in the same way.
+   
+   --log  is the file path to store log output in.
 '''
 import sh
 from itertools import tee, chain, groupby, starmap
