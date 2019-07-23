@@ -1,4 +1,4 @@
 pandas
 matplotlib
 biopython
-ete2
+ete3

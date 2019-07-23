@@ -1,5 +1,6 @@
 gmap
-star
+star=2.5.2b
 samtools
 bowtie2=2.2.5
 krona
+abyss=2.1.5

@@ -15,13 +15,16 @@ from glob import glob
 from docopt import docopt
 import csv
 import os
-import pipeline
+from . import pipeline
 from path import Path
 import yaml
 import itertools
 import sys
 from functools import partial
 import multiprocessing
+
+from typing import Dict,List,Tuple,Iterator,Any
+from collections import OrderedDict # a type for csv.DicterReader
 # if there is more than one pair of read files need to handle that. I guess by concatenating.
 # need to fix so that we join on conting ID. currently joining on something else.
 # also ppl might do something with index
@@ -30,57 +33,56 @@ import multiprocessing
 SEP=';'
 
 
-def weave_files(sampledir, row):
+def weave_files(sampledir: str, row: OrderedDict[str, str]) -> Tuple[List[str], List[str]]:
   control_dirs = row['control_dirs'].split(SEP)
   sdir = partial(os.path.join, sampledir)
   read_dirs = row['read_dirs'].split(SEP)
   # control_dirs could be empty
-  c1s, c2s = reads_from_dirs(map(sdir, control_dirs)) if control_dirs else ([], [])
-  controls = list(itertools.chain(*zip(c1s, c2s)))
+  c1s, c2s = reads_from_dirs(list(map(sdir, control_dirs))) if control_dirs else ([], [])
+  controls = list(itertools.chain(*list(zip(c1s, c2s))))
   # order of contams doesn't matter but we'll zip them anyway
-  r1s, r2s = reads_from_dirs(map(sdir, read_dirs))
+  r1s, r2s = reads_from_dirs(list(map(sdir, read_dirs)))
   # weave them into a sigle list of R1, R2^1, R1^2, R2^2 ....
-  fastqs = list(itertools.chain(*zip(r1s, r2s)))
+  fastqs = list(itertools.chain(*list(zip(r1s, r2s))))
   return fastqs, controls
 
-def reads_from_dirs(dirs):
+def reads_from_dirs(dirs: List[str]) -> Tuple[List[str], List[str]]:
   """Extract all R1/R2 files from a directory, ignores index (I1/I2) files"""
   # return list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R[12]_*')), dirs)))
-  r1s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R1_*')), dirs)))
-  r2s = list(itertools.chain(*map(lambda x: glob(os.path.join(x, '*_R2_*')), dirs)))
+  r1s = list(itertools.chain(*[glob(os.path.join(x, '*_R1_*')) for x in dirs]))
+  r2s = list(itertools.chain(*[glob(os.path.join(x, '*_R2_*')) for x in dirs]))
   return r1s, r2s
 
 # run the main program
 
+def main() -> None:
+  args = docopt(__doc__, version='Version 1.0')  #TODO: use TypedDict, maybe
 
-def main():
-  args = docopt(__doc__, version='Version 1.0')
-
-  # copy-pasted from pipeline.py :(
+# copy-pasted from pipeline.py :( 
   cfg_f = args['--config']
-  cfg_y = yaml.load(open(cfg_f))
-  cfg = pipeline.Config(cfg_y)
+  cfg_y = yaml.load(open(cfg_f))  # type: Dict[str, Any] # in this case it's a dict, it's like json.loads
+  cfg = pipeline.Config(cfg_y)  # type: ignore  #TODO: dynamically defined in pipeline.py
   # it's probably better to have separate log files.
   if args['--log']:
     _log = Path(args['--log'])
     if _log.exists():
-      print "Removing old log file %s" % _log
+      print("Removing old log file %s" % _log)
       _log.remove()
     log = open(args['--log'], 'a')
   else:
     log = sys.stdout
 
   sheet = open(args['<samplesheet>'])
-  rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
-  rows=list(rows)
+  _rows = csv.DictReader(sheet, fieldnames=['read_dirs', 'control_dirs'], delimiter='\t')
+  rows=list(_rows)
   base_out = args['--outdir'] or "." # os.getcwd()?
   sampledir = args['--sampledir']
-  def p_run(rows):
+  def p_run(rows: List[Dict[str, str]]) -> None:
       weave = partial(weave_files, sampledir)
       fqs_and_controls = list(map(weave, rows))
       run2_func = partial(pipeline.run2, cfg, log, base_out)
       pool = multiprocessing.Pool(len(rows))
-      print "Launching %d processes.\n==========================\n\n" % len(rows)
+      print("Launching %d processes.\n==========================\n\n" % len(rows))
       pool.map(run2_func, fqs_and_controls)
       pool.close()
       pool.join()
@@ -105,21 +107,23 @@ def main():
       #print "qsub {script} -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
       #print " -q batch -l nodes={node}:ppn={cores}".format(script=temp.name, node=amedpbswrair007.amed.ds.army.mil, cores=4)
       sample_num = row['read_dirs'].split(SEP)[0]
-      sh.qsub(script,
+      sh.qsub(script,                # type: ignore
               '-N',  "sheet-sample-%s" % sample_num,
               # "-M", "EMAIL HERE",
               # '-l', "nodes=1:ppn=8:mem=80514472881")
               '-l', "nodes=1:ppn=12",
               '-l', "mem=80514472881")
-      print "Running %s" % script
+      print("Running %s" % script)
   else:
-    print "No --qsub flag, didn't run anything."
+    print("No --qsub flag, didn't run anything.")
 #  if p:
 #
 #  else:
 #    for i, row in enumerate(rows):
 #      cfg.outdir = os.path.join(base_out, "sheet-sample-%d" % i)
 #      pipeline.run2(cfg, log, base_out, (fastqs, controls))
+  
+
 
 
    # if controls:
@@ -128,7 +132,6 @@ def main():
       #sh.python('pipeline.py', ' '.join(fastqs), '--control', ' '.join(controls), config=cfg_f, outdir=cfg.outdir)
    #   sh.python('pipeline.py', ' '.join(fastqs), '--config', cfg_f,  '--outdir', cfg.outdir, '--control', ' '.join(controls))
     #print 'python pipeline.py', ' '.join(fastqs), '--config', args['--config'], '-o', cfg.outdir, '--control', ' '.join(controls)
-
 
 
 if __name__ == '__main__':

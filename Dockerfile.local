@@ -1,7 +1,9 @@
 FROM centos:centos7
 MAINTAINER Michael Panciera
 
-ENV PYTHON_VERSION 3.6
+ARG GIT_USER
+ARG GIT_TOKEN
+ENV PYTHON_VERSION 3.7.1
 
 RUN yum -y update \
     && yum -y install curl bzip2 git wget make gcc-c++ \
@@ -17,13 +19,17 @@ RUN yum -y update \
 ENV PATH "/usr/local/bin/:$PATH"
 
 ENV RUNTYPE "TEST"
-ADD . /app
-WORKDIR /app
+
+ADD . /pathos/
+
+WORKDIR /pathos/
 
 RUN    cd install \
-    && bash assume-conda-install.sh /usr/local/bin/ \ 
+    && sh assume-conda-install.sh /usr/local/bin/ \ 
     && cd .. \
     && sh mk_yaml.sh > test.yaml \
-    && cd databases \
     && sh test-setup.sh \
     && pip install -r ../install/test-requirements.txt 
+#    && cd databases \
+#    && make krona 
+

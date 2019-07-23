@@ -5,3 +5,4 @@ __authoremails__ =  'michael.panciera.work@gmail.com'
 __description__ =   'Pathogen Discovery'
 __license__ =       'GNU PL 2'
 __url__ =           'https://github.com/averagehat/' + __projectname__
+__release__ = '0.1'

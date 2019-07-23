@@ -3,9 +3,11 @@ from collections import Counter
 #import pandas as pd
 import csv
 from io import StringIO
+from path import Path
+
 
 # need to fix so that we join on conting ID. currently joining on something else.
-test_string = u'''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
+test_string = '''qseqid	read_count	contam_percentage	superkingdom	kingdom	superfamily	genus	qend	bitscore	family	evalue	gapopen	pid	send	order	class	phylum	alnlen	species	sseqid	qstart	sstart
 15368	2.0	0.0	Bacteria			Bacillus	1.0	5e-08	Bacillaceae	4605131.0	3.0	93.18	4605174.0	Bacillales	Bacilli	Firmicutes	44.0	Bacillus cereus	gi|300373910|gb|CP001746.1|	0.0	44.0
 15368	2.0	0.0	Bacteria			Bacillus	1.0	5e-08	Bacillaceae	4605131.0	3.0	93.18	4605174.0	Bacillales	Bacilli	Firmicutes	44.0	Bacillus cereus	gi|300373910|gb|CP001746.1|	0.0	44.0
 4142	2.0	0.0	Bacteria			Bacillus	3.0	1e-14	Bacillaceae	3013062.0	0.0	100.0	3013016.0	Bacillales	Bacilli	Firmicutes	47.0	Bacillus kochii	gi|1237941648|gb|CP022983.1|	0.0	49.0
@@ -14,7 +16,7 @@ test_string = u'''qseqid	read_count	contam_percentage	superkingdom	kingdom	super
 1476			Viruses			Flavivirus	1.0	7e-12	Flaviviridae	212.0	2.0	95.83	165.0				48.0	Kokobera virus	gi|1098496923|gb|KU059115.1|	0.0	48.0
 '''
 
-def test_differing_rank():
+def test_differing_rank() -> str:
   test_csv = StringIO(test_string)
   #rows = pd.read_csv(test_csv, sep='\t')
   rows = list(csv.DictReader(test_csv, delimiter='\t'))
@@ -24,7 +26,7 @@ def test_differing_rank():
   species_rows = rows[:3]
   assert differing_rank(species_rows) == 'species'
 
-  kingdom_rows = rows[0], rows[1], rows[2], rows[4]
+  kingdom_rows = [rows[0], rows[1], rows[2], rows[4]]
   # some columns are empty: in this case kingdom. so with that unknown, we go down to phylum.
   assert differing_rank(kingdom_rows) == 'phylum', differing_rank(kingdom_rows) # map(get('kingdom'), kingdom_rows)
 
@@ -36,13 +38,13 @@ def test_differing_rank():
 '''
 Find the smallest rank where the blast results DO NOT match.
 '''
-def differing_rank(rows):
+def differing_rank(rows: List[OrderedDict[str, Any]]) -> str:
   # no domain
   ranks = reversed(['superkingdom',	'kingdom',	 'phylum',\
    'class', 'order', 'superfamily', 'family',	'genus', 'species'])
   differ_at = 'MATCH'
   for rank in ranks:
-    row_ranks = map(get(rank), rows)
+    row_ranks = list(map(get(rank), rows))
     uniq = set(row_ranks)
     if len(uniq) > 1:
       differ_at = rank
@@ -75,18 +77,28 @@ def differing_rank(rows):
 from toolz.dicttoolz import merge
 import itertools
 from itertools import groupby
-def flag(group_obj):
-  group = list(group_obj[1])
-  rank = differing_rank(group)
-  add_rank = lambda x: merge(x, {'different_rank' : rank})
-  return map(add_rank, group)
+from typing import Iterator,Tuple,_T,List,Any,Dict
+from collections import OrderedDict # dictreader returns ordereddict in py 3.6+
 
-def flag_annotated_blast(input_fn, output_fn):
+#GroupByObj = Iterator[Tuple[_T, Iterator[_T]]]
+
+def flag(group_obj: Tuple[str, Iterator[OrderedDict[str, Any]]]) -> List[Dict[Any, Any]]:
+  group = list(group_obj[1])
+  rank = differing_rank(group) # type: str
+  add_rank = lambda x: merge(x, {'different_rank' : rank})
+  return list(map(add_rank, group))
+
+def flag_annotated_blast(input_fn: Path, output_fn: Path) -> None:
+  '''
+  @param input_fn - input file
+  @param output_fn - output file
+  @returns Nothing
+  '''
   with open(input_fn) as f_in, open(output_fn, 'w') as f_out:
     rows = list(csv.DictReader(f_in, delimiter='\t'))
-    groups = groupby(rows, lambda x: x['qseqid'])
-    flagged_rows = list(itertools.chain(*map(flag, groups)))
-    writer = csv.DictWriter(f_out, flagged_rows[0].keys(), delimiter='\t')
+    groups = groupby(rows, lambda x: x['qseqid']) # Iterator[Tuple[str, Iterator[Any]]]
+    flagged_rows = list(itertools.chain(*list(map(flag, groups))))
+    writer = csv.DictWriter(f_out, list(flagged_rows[0].keys()), delimiter='\t')
     writer.writeheader()
     for row in flagged_rows:
       writer.writerow(row)
@@ -94,4 +106,4 @@ def flag_annotated_blast(input_fn, output_fn):
 
 
 if __name__ == '__main__':
-  print test_differing_rank()
+  print(test_differing_rank())

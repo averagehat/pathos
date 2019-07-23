@@ -3,14 +3,21 @@ Usage:
     pipeline.py (--fastq <FASTQS>...) --config <config> [-o <outdir>] [--log <log>] [--control <CONTROLS>...]
 
 Options:
-    -f <FASTQS>, --fastq <FASTQS>
+    -f <FASTQS>, --fastq <FASTQS>       
     -r <CONTROLS>, --control <CONTROLS>
     -c <config>, --config <config>
     --o <outdir>, --outdir <outdir>
     --log <log>, -l <log>
+    
+Notes: 
+   For the --fastq argument, provide any number of paired read files ordered like: 
+   --fastq   <Samp0_R1> <Samp0_R2> <Samp1_R1> <Samp1_R2> . . . 
+   The --control argument should be provided in the same way.
+   
+   --log  is the file path to store log output in.
 '''
 import sh
-from itertools import imap, izip, tee, chain, groupby, ifilter, starmap
+from itertools import tee, chain, groupby, starmap
 from toolz.dicttoolz import keymap,valfilter,keyfilter,merge,assoc
 from toolz.itertoolz import mapcat, partition
 from funcy.seqs import _icut
@@ -26,10 +33,10 @@ from Bio import SeqIO
 from operator import itemgetter as get
 from collections import Counter
 import csv
-from ete2 import NCBITaxa
+from ete3 import NCBITaxa
 import plumbum
 import pandas as pd
-from schema import schema
+from .schema import schema
 from jsonschema import validate
 
 #import numpy as np
@@ -64,7 +71,7 @@ class Config:
     def __init__(self, entries):
         self.__dict__.update(entries)
         for k,v in self.__dict__.items():
-            if type(v) == types.DictType:
+            if type(v) == dict:
                 setattr(self, k, Config(v))
 class Sh_(object):
     def __getattr__(self, attr):
@@ -116,7 +123,7 @@ def rapsearch(log, cfg, fq, out):
     sh.rapsearch(o=out, d=cfg.rapsearch.rapsearchDB, q=fq, _err=log, _out=log)
 
 def blastn(log, cfg, fq, out):
-    print "attempting blast with %s %s" % (fq, out)
+    print("attempting blast with %s %s" % (fq, out))
     #sh_.blastn(outfmt=6, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out)
     outformat = " ".join(["6"] + blast_columns)
     sh.blastn('-max_target_seqs', cfg.blastn.max_target_seqs, outfmt=outformat, db=cfg.ncbi.ntDB, query=fq, _err=log, _out=out, _long_prefix='-')
@@ -150,7 +157,7 @@ SEQID='qseqid'
 #def lzw_filter(log, cfg, r1, r2, out1, out2):
 def lzw_filter_single(min_complexity, x):
     un_comp_len = len(str(x.seq))
-    comp_len = sum(imap(len, sh.gzip(f=True, _in=str(x.seq))))
+    comp_len = sum(map(len, sh.gzip(f=True, _in=str(x.seq))))
     # sh.sh('lzw.sh', x) . . .
     complexity =  comp_len / float(un_comp_len)
     #print complexity
@@ -158,13 +165,13 @@ def lzw_filter_single(min_complexity, x):
 
 def unzip(seq):
     t1, t2 = tee(seq)
-    return imap(get(0), t1), imap(get(1), t2)
+    return map(get(0), t1), map(get(1), t2)
 
 def filter_pair(func, r1, r2, o1, o2, format):
     CHUNK_SIZE = 100000
     fwd = SeqIO.parse(r1, format)
     rev = SeqIO.parse(r2, format)
-    filtered = ((x, y) for (x, y) in izip(fwd, rev)
+    filtered = ((x, y) for (x, y) in zip(fwd, rev)
                 if func(x) and func(y))
     chunks = _icut(False, CHUNK_SIZE/2, filtered)
     for chunk in chunks:
@@ -206,7 +213,7 @@ def sum_sam_by_ref(log, cfg, sam):
 def readcounts_to_tsv(sam, out):
     counter, contam_counter = sum_sam_by_ref(None, None, sam)
     xs = []
-    for ref, count in counter.iteritems():
+    for ref, count in counter.items():
         xs.append({SEQID : ref,
                   'read_count' : count,
                   'contam_percentage' : contam_counter[ref] / float(count) })
@@ -232,16 +239,16 @@ def readcounts_to_tsv(sam, out):
 def fasta_add_metadata(fasta, tsv, fasta_out):
     meta = csv.DictReader(open(tsv), delimiter='\t')
     fa = list(SeqIO.parse(fasta, 'fasta'))
-    ids = map(lambda x: x.id, fa)
+    ids = [x.id for x in fa]
     meta.sort(key=lambda x: ids.index(x[SEQID]))
     def annotate(d):
         del d[SEQID]
         return ' ; ' + ';'.join(dictmap("{0}={1}".format, d))
-    for (rec, met) in izip(fa, meta):
+    for (rec, met) in zip(fa, meta):
         rec.id += annotate(meta)
     with open(fasta_out, 'w') as out:
             SeqIO.write(fa, out, 'fasta')
-from StringIO import StringIO
+from io import StringIO
 # def bam_to_counter(bam):
 def get_idxstats(bam):
     # assumes bam is sorted, and being indexed will speed up significantly
@@ -325,25 +332,25 @@ def dup_blast(log, counter, blst, out):
 # taxid = 1056490
 
 def blastdbcmd(**opts):
-    cmd_opts = keymap('-{}'.format, opts).items()
+    cmd_opts = list(keymap('-{}'.format, opts).items())
     process = plumbum.local['blastdbcmd'][cmd_opts]
-    print process
+    print(process)
     for line in process.popen().iter_lines(retcode=None):
         yield line[0]
 
 def get_taxid(db, seqids): # (Path, str) -> dict[str,str]
    #res = sh.blastdbcmd(db=db, outfmt="'%g %T'", entry="'%s'" % seqid, _long_prefix='-')
-   max_ids = 1000/80
+   max_ids = 1000 // 80
    if len(seqids) > max_ids:
       xs = [seqids[i*max_ids:(i+1)*max_ids] \
-         for i in range(len(seqids) / max_ids)]
+         for i in range(len(seqids) // max_ids)]
       xs.extend([seqids[sum(map(len, xs))-1:]])
    else: xs = [seqids]
    res = mapcat(lambda x: blastdbcmd(db=db, outfmt="'%g %T'", entry="'%s'" % ','.join(x)), xs)
    #res = blastdbcmd(db=db, outfmt="'%g %T'", entry="'%s'" % ','.join(xs))
-   res = ifilter(bool, res)
-   res = imap(lambda s: s.strip("'"), res)
-   return dict(imap(unicode.split, res))
+   res = filter(bool, res)
+   res = map(lambda s: s.strip("'"), res)
+   return dict(map(str.split, res))
 
 def taxonomy(ncbi, taxid):
     lineage = ncbi.get_lineage(taxid)
@@ -371,7 +378,7 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
   # rows = csv.DictReader(open(blastpath), delimiter='\t',fieldnames=[SEQID, 'sseqid','pid', 'alnlen','gapopen','qstart','qend','sstart','send','evalue','bitscore'])
   rows = csv.DictReader(open(blastpath), delimiter='\t',fieldnames=blast_columns)
   rows = list(rows)
-  seqids = map(get('sseqid'), rows)
+  seqids = list(map(get('sseqid'), rows))
   taxids = get_taxid(db, seqids)
   def get_gi(s):
     fields = s.split('|')
@@ -379,7 +386,7 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
         return fields[1]
     else:
         raise ValueError("Seq ID %s is missing GI fields and '|'" % s)
-  gis = imap(get_gi, seqids)
+  gis = map(get_gi, seqids)
   #TODO: change matches to use something unique--not the TAXID! actually, why is it a dict
   # in the first place? it should be a list of dictionaries, and then map over
   # the dictionaries to merge them with the taxonomy info
@@ -387,11 +394,14 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
   # matches = . . .
   # items = . . .
   #matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
-  ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
+  if ete2_db:
+    ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
+  else: 
+    ncbi = NCBITaxa() # downloads database and creates SQLite database if needed
  # items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
   matches = [assoc(row, 'taxid', taxids[gi]) for gi, row in zip(gis, rows) if gi in taxids]
   items = [merge(row1, taxonomy(ncbi, row1['taxid'])) for row1 in matches]
-  res =  imap(partial(keyfilter, csv_fields.__contains__), items)
+  res =  map(partial(keyfilter, csv_fields.__contains__), items)
   return res
   #return {k:v for k, v in items if k in fields}
 
@@ -471,7 +481,7 @@ def seq_reaches_length(length, seq):
 
 def filter_contigs(min_length, inc, outc):
   raw_seqs = SeqIO.parse(inc, 'fasta')
-  filtered_seqs = ifilter(partial(seq_reaches_length, min_length), raw_seqs)
+  filtered_seqs = filter(partial(seq_reaches_length, min_length), raw_seqs)
   with open(outc, 'w') as out:
     #SeqIO.write(filtered_seqs, out, 'fasta')
     for seq in filtered_seqs:
@@ -655,9 +665,9 @@ def run(cfg, input1, input2, contams, log=None):
 #  if need(contig_nr):
 #    blastx(log, cfg, contigs, contig_nr)
 #    dup_blast(log, contigs_sam, contig_nr, dup_nr)
-
+  _run_type = os.environ.get('RUNTYPE', 'REAL')
   logtime('krona')
-  if need(contig_kronaNT):
+  if need(contig_kronaNT) and (_run_type != 'TEST'):
     krona(log, cfg, contig_nt, contig_kronaNT)
   if need(contig_kronaNT_dup):
     krona(log, cfg, dup_nt, contig_kronaNT_dup)
@@ -676,7 +686,7 @@ def run(cfg, input1, input2, contams, log=None):
   contig_nt_almost = p("contigs.nt.almost")
   if need(contig_nt_almost):
       # joins on SEQID, which collapses data.
-    import diff_ranks
+    from . import diff_ranks
     diff_ranks.flag_annotated_blast(with_tax_tsv, contig_nt_flagged)
     join_csv(contigs_meta, contig_nt_flagged, SEQID, contig_nt_almost)
 
@@ -739,7 +749,7 @@ def run2(cfg, log, base_out, fastqs_and_controls):
   fastqs, controls = fastqs_and_controls
   controls = controls if controls else []
   fastqs, controls = list(fastqs), list(controls)
-  print 'FASTQS : %s' % fastqs, 'CONTROLS : %s' % controls
+  print('FASTQS : %s' % fastqs, 'CONTROLS : %s' % controls)
   assert len(fastqs) > 1 and (len(fastqs) % 2) == 0, "Must provide an even number of input files."
   vdbpm_id = Path(fastqs[0]).splitall()[-2]
   #print fastqs, control
@@ -795,7 +805,7 @@ def main():
   if args.log:
     _log = Path(args.log)
     if _log.exists():
-      print "Removing old log file %s" % _log
+      print("Removing old log file %s" % _log)
       _log.remove()
     log = open(args.log, 'a')
   else:
@@ -806,7 +816,7 @@ def main():
   #run(cfg, args['<r1>'], args['<r2>'], c1, c2, log)
   #TODO: fix . . .
   controls = args.control
-  print args
+  print(args)
 
   run2(cfg, log, cfg.outdir, (fastqs, controls))
 #def run2(cfg, log, base_out, fastqs_and_controls):
