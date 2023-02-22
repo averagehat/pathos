@@ -31,7 +31,7 @@ import plumbum
 import pandas as pd
 from schema import schema
 from jsonschema import validate
-
+PER_RUN_ETE2_DB = True
 #import numpy as np
 #import matplotlib.pyplot as plt
 # TODO: Log commands as doing them
@@ -387,16 +387,24 @@ def blast2summary_dict(db, blastpath, ete2_db): # (Path, Path) -> list[dict]
   # matches = . . .
   # items = . . .
   #matches = dict((taxids[gi], row) for gi, row in zip(gis,rows) if gi in taxids)
-  ncbi = NCBITaxa(ete2_db) # downloads database and creates SQLite database if needed
+  per_run_ete2_db = p('taxa.sqlite')
+  if PER_RUN_ETE2_DB:
+    if os.path.exists(ete2_db):
+      shutil.copy(ete2_db, per_run_ete2_db)
+  else:
+      per_run_ete2_db = ete2_db
+  ncbi = NCBITaxa(per_run_ete2_db) # downloads database and creates SQLite database if needed
  # items = dictmap(lambda tid,row: merge(row, taxonomy(ncbi, tid)), matches)
   matches = [assoc(row, 'taxid', taxids[gi]) for gi, row in zip(gis, rows) if gi in taxids]
   items = [merge(row1, taxonomy(ncbi, row1['taxid'])) for row1 in matches]
   res =  imap(partial(keyfilter, csv_fields.__contains__), items)
+  res = list(res)
+  os.remove(per_run_ete2_db)
   return res
   #return {k:v for k, v in items if k in fields}
 
 def blast2summary(db, blastpath, outpath, cfg): # (Path,Path,Path) -> None
-    with_taxonomies = list(blast2summary_dict(db, blastpath, cfg.ete2_db))
+    with_taxonomies = blast2summary_dict(db, blastpath, cfg.ete2_db)
     with open(outpath, 'w') as out:
        #writer = csv.DictWriter(out, head.keys(), delimiter='\t')
        writer = csv.DictWriter(out, csv_fields, delimiter='\t')
@@ -656,14 +664,16 @@ def run(cfg, input1, input2, contams, log=None):
 #    blastx(log, cfg, contigs, contig_nr)
 #    dup_blast(log, contigs_sam, contig_nr, dup_nr)
 
-  logtime('krona')
-  if need(contig_kronaNT):
-    krona(log, cfg, contig_nt, contig_kronaNT)
-  if need(contig_kronaNT_dup):
-    krona(log, cfg, dup_nt, contig_kronaNT_dup)
-#  if need(contig_kronaNR):
-#    krona(log, cfg, contig_nr, contig_kronaNR)
-
+  if os.path.exists(cfg.ncbi.ktTaxonomy):
+    logtime('krona')
+    if need(contig_kronaNT):
+      krona(log, cfg, contig_nt, contig_kronaNT)
+    if need(contig_kronaNT_dup):
+      krona(log, cfg, dup_nt, contig_kronaNT_dup)
+#    if need(contig_kronaNR):
+#      krona(log, cfg, contig_nr, contig_kronaNR)
+  else:
+    logtime("Skipping krona. Database specified not found: " + cfg.ncbi.ktTaxonomy)
   logtime('blast2summary')
   if need(with_tax_tsv):
     blast2summary(cfg.ncbi.ntDB, contig_nt, with_tax_tsv, cfg) # this is shared by read files
